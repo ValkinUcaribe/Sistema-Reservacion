@@ -1,0 +1,190 @@
+
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(../image/Fondo.jpg) no-repeat center top;
+    background-size: cover;
+    font-family: sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-box {
+    width: 90%;
+    max-width: 400px;
+    background: #0D283B;
+    border-radius: 10px;
+    color: #fff;
+    box-sizing: border-box;
+    padding: 60px 30px 40px 30px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.logo-frame {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    margin: -100px auto 20px;
+    overflow: hidden;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-frame img {
+    width: 50px;
+    height: 70px;
+}
+
+.login-box h1 {
+    margin: 0;
+    padding-bottom: 20px;
+    text-align: center;
+    font-size: 22px;
+}
+
+.login-box label {
+    margin: 0;
+    padding: 0;
+    font-weight: bold;
+    display: block;
+}
+
+.login-box input[type="text"],
+.login-box input[type="password"],
+.login-box input[type="email"] {
+    width: 100%;
+    margin-bottom: 20px;
+    border: none;
+    border-bottom: 1px solid #fff;
+    background: transparent;
+    outline: none;
+    height: 30px;
+    color: #fff;
+    font-size: 16px;
+}
+
+.login-box input[type="submit"] {
+    width: 100%;
+    border: none;
+    outline: none;
+    height: 40px;
+    background: #4E6580;
+    color: #fff;
+    font-size: 16px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.login-box input[type="submit"]:hover {
+    background: #7692b2;
+}
+
+.enlace {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.enlace span {
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 20px;
+    color: darkgrey;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.login-box a {
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 20px;
+    color: #b6d2f2;
+}
+
+.login-box a:hover {
+    color: #fff;
+}
+
+/* Checkboxes container */
+.login-box div {
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.login-box input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Mensajes flash */
+.flash-message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.flash-message.success {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.flash-message.error {
+    background-color: #f44336;
+    color: white;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center; 
+    margin-bottom: 15px;
+    font-size: 14px;
+    flex-wrap: wrap;
+}
+
+.checkbox-container label {
+    color: #ccc;
+}
+
+.checkbox-container a {
+    color: #b6d2f2;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.checkbox-container a:hover {
+    color: #fff;
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 40px 20px;
+    }
+
+    .logo-frame {
+        width: 70px;
+        height: 70px;
+        margin-top: -80px;
+    }
+
+    .logo-frame img {
+        width: 40px;
+        height: 60px;
+    }
+
+    .login-box h1 {
+        font-size: 20px;
+    }
+
+    .login-box input[type="submit"] {
+        font-size: 15px;
+    }
+    
+}

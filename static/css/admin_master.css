@@ -1,0 +1,135 @@
+body {
+    font-family: 'Lucida Sans';
+    display: grid;
+    place-items: center;
+    margin: 0;
+    min-height: 100vh;
+    background: #273443;
+    color: #f9f8fa;
+    
+}
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --color-primary: #37495e;
+    --color-muted: #f0f1f3;
+}
+
+.login {
+    position: relative;
+    z-index: 2;
+    background: rgb(6 5 7 / 25%);
+    border-radius: 40px;
+    padding: 72px 32px 58px;
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.login :is(h2,h3) {
+    font-weight: 500;
+}
+
+.login h2 {
+    font-size: 24px;
+    margin: 0 0 6px;
+}
+
+.login h3 {
+    color: var(--color-muted);
+    font-size: 12px;
+    margin: 0 0 56px;
+}
+
+.login form {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 32px;
+}
+
+.login .textbox {
+    position: relative;
+}
+
+.login :is(input, button) {
+    height: 56px;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+}
+
+label, input {
+    transition: 0.3s;
+}
+
+.textbox label {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    translate: 0 -50%;
+    transform-origin: 0 50%;
+    pointer-events: none;
+    color: var(--color-muted);
+}
+
+.textbox input {
+    width: 100%;
+    padding-top: 10px;
+    background: #45566a;
+    outline: none;
+    color: inherit;
+    box-shadow: 0 0 0 2px transparent;
+}
+
+.textbox input:focus {
+    box-shadow:  0 0 0 2px var(--color-primary);
+}
+
+.textbox input:is(:focus, :not(:invalid)) ~ label {
+    scale: 0.725;
+    translate: 0 -112%;
+}
+
+.login button {
+    position: relative;
+    color: #f9f9f9;
+    font-size: 17px;
+    background: var(--color-primary);
+}
+
+.login :is(button span, button p) {
+    transition: 0.3s;
+}
+
+.login button span {
+    position: absolute;
+    top: 52%;
+    left: 60%;
+    translate: 10px -50%;
+    opacity: 0;
+    font-size: 22px;
+}
+
+.login button:hover p {
+    translate: -10px 0;
+}
+
+.login button:hover span {
+    opacity: 1;
+    translate: 20px -50%;
+}
+
+.login > p {
+    margin: 56px 0 0;
+    font-size: 15px;
+    color: var(--color-muted);
+}

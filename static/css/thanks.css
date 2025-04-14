@@ -1,0 +1,91 @@
+body{
+    margin: 0;
+    padding: 0;
+    /*background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(../image/Fondo_reserva.jpg) no-repeat center top;*/
+    /*background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(../image/Fondo_reserva.jpg) no-repeat center top;*/
+    background-color: #091B29;
+    background-size: cover;
+    font-family: sans-serif;
+    /*height: 100vh;*/
+    /*Editado abajo*/
+    min-height: 100vh; 
+    overflow: auto;
+
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    display: flex;
+    
+}
+/*body {
+    background-color: #37495E;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}*/
+.modal-box {
+    /*background: #0D283B;*/
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    text-align: center;
+    max-width: 400px;
+    color: #0D283B;
+}
+.icon {
+    font-size: 60px;
+    color: #28a745;
+    animation: pop 0.5s ease-in-out;
+}
+.order-number {
+    font-size: 14px;
+    color: #bbb;
+    margin-bottom: 10px;
+}
+@keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.btn-custom {
+    background-color: #3e5064;
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    text-decoration: none;
+    margin: 5px;
+    display: inline-block;
+}
+.btn-custom:hover {
+    background-color: #e68900;
+}
+.btn-secondary {
+    background-color: #444;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    text-decoration: none;
+    margin: 5px;
+    display: inline-block;
+}
+.btn-secondary:hover {
+    background-color: #555;
+}
+
+@media (max-width: 480px) {
+    .modal-box {
+        padding: 20px;
+        width: 90%;
+    }
+    .icon {
+        font-size: 40px;
+    }
+}

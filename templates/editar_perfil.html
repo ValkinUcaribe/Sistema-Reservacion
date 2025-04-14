@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es"> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil</title>
+    <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/editar_perfil.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <!-- Botón hamburguesa -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú">☰</button>
+
+            <!-- Logo -->
+            <div class="logo">
+                <a href="/home">
+                    <img src="/static/image/LogoValkin.png" alt="VALKING Logo" height="50">
+                </a>
+            </div>
+    
+            <!-- Menú -->
+            <nav id="nav-menu">
+                <ul class="nav-list">
+                    <li><a href="/reservacion">RESERVAR</a></li>
+                    <li><a href="/perfil">MI PERFIL</a></li>
+                    <li><a href="/tienda">TIENDA</a></li>
+                    <li><a href="/tutoriales">TUTORIALES</a></li>
+                    <li><a href="/paquetes">PAQUETES</a></li>
+                    <li><a href="/reservas_page">RESERVAS</a></li>
+                </ul>
+                <div class="user-icon">
+                    
+                    {% if session['user_id'] %}
+                        <span>{{ session['user_nombre'] }}</span>
+                        <a href="/logout" title="Cerrar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% else %}
+                        <a href="/" title="Iniciar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2>Editar Perfil</h2>
+
+        <form id="editarPerfilForm" method="POST" enctype="multipart/form-data">
+            <!-- Campo de imagen de perfil (con imagen previa si existe) -->
+            <div class="profile-container full-width">
+                <label for="foto">Foto de perfil:</label>
+                {% if usuario.imagen_base64 %}
+                    <img src="{{ usuario.imagen_base64 }}" alt="Foto de perfil" class="img-thumbnail" width="100">
+                {% else %}
+                    <img src="/static/imagenes/Logo_Valkin_1.png" alt="Logo" class="img-thumbnail" width="100">
+                {% endif %}
+                <input type="file" id="foto" name="foto" class="form-control">
+            </div>
+
+                <!-- CAMPOS EN DOS COLUMNAS -->
+                <label for="nombre">Nombre:</label> 
+                <input type="text" id="nombre" name="nombre" class="form-control" value="{{ usuario.nombre }}" required>
+
+                <label for="apellidos">Apellidos:</label>
+                <input type="text" id="apellidos" name="apellidos" class="form-control" value="{{ usuario.apellidos }}" required>
+
+                <label for="correo">Correo:</label> <!-- SE LLENA AUTOMÁTICAMENTE -->
+                <input type="email" id="correo" name="correo" class="form-control" value="{{ usuario.correo }}" required>
+
+                <label for="telefono">Teléfono:</label>
+                <input type="text" id="telefono" name="telefono" class="form-control" value="{{ usuario.telefono }}" required>
+
+                <label for="direccion">Dirección:</label>
+                <input type="text" id="direccion" name="direccion" class="form-control" value="{{ usuario.direccion }}" required>
+
+                <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" class="form-control" value="{{ usuario.fecha_nacimiento }}" required>
+
+                <label for="tipo_perfil">Tipo de perfil:</label>
+                <select id="tipo_perfil" name="tipo_perfil" class="form-control">
+                    <option value="ninguno" {% if usuario.tipo_perfil == 'ninguno' %}selected{% endif %}>Ninguno</option>
+                    <option value="aficionado" {% if usuario.tipo_perfil == 'aficionado' %}selected{% endif %}>Aficionado</option>
+                    <option value="estudiante" {% if usuario.tipo_perfil == 'estudiante' %}selected{% endif %}>Estudiante</option>
+                    <option value="piloto" {% if usuario.tipo_perfil == 'piloto' %}selected{% endif %}>Piloto</option>
+                    <option value="piloto_privado" {% if usuario.tipo_perfil == 'piloto_privado' %}selected{% endif %}>Piloto privado</option>
+                    <option value="piloto_comercial" {% if usuario.tipo_perfil == 'piloto_comercial' %}selected{% endif %}>Piloto comercial</option>
+                    <option value="propiertario" {% if usuario.tipo_perfil == 'propiertario' %}selected{% endif %}>Propietario</option>
+                    <option value="instructor" {% if usuario.tipo_perfil == 'instructor' %}selected{% endif %}>Instructor</option>
+                </select>
+
+                <label for="institucion">Institución:</label>
+                <input type="text" id="institucion" name="institucion" class="form-control" value="{{ usuario.institucion }}" required>
+
+                <label for="aeronave">Aeronave:</label>
+                <input type="text" id="aeronave" name="aeronave">
+
+                <label for="perifericos">Periféricos:</label>
+                <input type="text" id="perifericos" name="perifericos">
+
+                <!-- BOTÓN CENTRADO -->
+                <div class="button-container">
+                    <button type="submit">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+
+    <script>
+        /*HEADER FIJO*/
+        let lastScrollTop = 0;
+            const header = document.querySelector("header");
+
+            window.addEventListener("scroll", function () {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollTop > lastScrollTop) {
+                    // Scroll hacia abajo → ocultar header
+                    header.style.top = "-80px";
+                } else {
+                    // Scroll hacia arriba → mostrar header
+                    header.style.top = "0";
+                }
+
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Evitar negativos
+            });
+
+            /*SCRIPT PARA EL MENÚ DESPLAZABLE DEL HEADER*/
+            const menuToggle = document.getElementById('menu-toggle');
+            const navMenu = document.getElementById('nav-menu');
+
+            menuToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
+
+        // Función para mostrar la alerta de confirmación con SweetAlert2 antes de guardar cambios
+        const form = document.getElementById('editarPerfilForm');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault(); // Evita el envío del formulario de inmediato
+
+            // Muestra el Swal de confirmación
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Los cambios realizados se guardarán.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, guardar cambios',
+                cancelButtonText: 'No, cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Si se confirma, se envía el formulario
+                    form.submit();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

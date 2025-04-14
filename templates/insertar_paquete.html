@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insertar Paquete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0B2545;
+            color: #FFFFFF;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+        .navbar {
+            background-color: #1B1B2F;
+            width: 200px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            border-radius: 10px;
+            margin: 20px;
+            height: calc(100vh - 40px);
+        }
+        .navbar a {
+            color: #E94560;
+            text-decoration: none;
+            padding: 10px;
+            margin: 10px 0;
+            display: block;
+            text-align: center;
+            border-radius: 5px;
+            background-color: #162447;
+        }
+        .navbar a:hover {
+            background-color: #E94560;
+            color: #FFFFFF;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            margin-left: 20px;
+            width: calc(100% - 240px);
+        }
+        h2 {
+            text-align: center;
+            padding: 20px;
+            background-color: #162447;
+            width: 100%;
+            margin: 0;
+            border-bottom: 2px solid #E94560;
+        }
+        form {
+            background-color: #1F4068;
+            padding: 20px;
+            border-radius: 10px;
+            width: 50%;
+            margin: 20px auto;
+        }
+        label, input {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        input[type="text"], input[type="number"], input[type="date"] {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+        input[type="submit"] {
+            background-color: #E94560;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        input[type="submit"]:hover {
+            background-color: #D7374E;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/insertar_paquete">Insertar Paquete</a>
+        <a href="/paquetes_lista">Lista de Paquetes</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/">Logout</a>
+    </div>
+    <div class="content">
+        <h2>{% if paquete %}Modificar Paquete{% else %}Insertar Paquete{% endif %}</h2>
+        <form method="POST">
+            <label for="nombre_paquete">Nombre del Paquete:</label>
+            <input type="text" id="nombre_paquete" name="nombre_paquete" required value="{{ paquete.nombre_paquete if paquete else '' }}">
+
+            <label for="descripcion">Descripción:</label>
+            <input type="text" id="descripcion" name="descripcion" required value="{{ paquete.descripcion if paquete else '' }}">
+
+            <label for="precio">Precio:</label>
+            <input type="number" step="0.01" id="precio" name="precio" required value="{{ paquete.precio if paquete else '' }}">
+
+            <label for="moneda">Moneda:</label>
+            <input type="text" id="moneda" name="moneda" required value="{{ paquete.moneda if paquete else '' }}">
+
+            <label for="caducacion">Caducación:</label>
+            <input type="number" id="caducacion" name="caducacion" required value="{{ paquete.caducacion if paquete else '' }}">
+
+            <label for="horas">Horas:</label>
+            <input type="number" step="1" id="horas" name="horas" required value="{{ paquete.horas if paquete else '' }}">
+
+            <input type="submit" value="{% if paquete %}Modificar{% else %}Insertar{% endif %}">
+        </form>
+    </div>
+</body>
+</html>

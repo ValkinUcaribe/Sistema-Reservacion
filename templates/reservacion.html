@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar</title>
+    <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
+    <!--    <link rel="stylesheet" href="/static/css/reservacion.css">-->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reservacion.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .num-duracion {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .num-duracion button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            transition: background-color 0.3s, transform 0.3s;
+            width: 50px;
+            height: 50px;
+        }
+
+        .num-duracion button:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .num-duracion input {
+            width: 60px;
+            text-align: center;
+            font-size: 18px;
+            border: 2px solid #ccc;
+            padding: 8px;
+            border-radius: 5px;
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+
+        #btnReservar {
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 18px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #btnReservar:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <!-- Botón hamburguesa -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú">☰</button>
+
+            <!-- Logo -->
+            <div class="logo">
+                <a href="/home">
+                    <img src="/static/image/LogoValkin.png" alt="VALKING Logo" height="50">
+                </a>
+            </div>
+
+            <!-- Menú -->
+            <nav id="nav-menu">
+                <ul class="nav-list">
+                    <li><a href="/reservacion">RESERVAR</a></li>
+                    <li><a href="/perfil">MI PERFIL</a></li>
+                    <li><a href="/tienda">TIENDA</a></li>
+                    <li><a href="/tutoriales">TUTORIALES</a></li>
+                    <li><a href="/paquetes">PAQUETES</a></li>
+                    <li><a href="/reservas_page">RESERVAS</a></li>
+                </ul>
+                <div class="user-icon">
+                    
+                    {% if session['user_id'] %}
+                        <span>{{ session['user_nombre'] }}</span>
+                        <a href="/logout" title="Cerrar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% else %}
+                        <a href="/" title="Iniciar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="contenedor-reserva">
+            <div class="tarjeta">
+                <div class="calendario">
+                    <h2>Selecciona una fecha</h2>
+                    <div id="calendar"></div>
+                </div>
+                <div class="horas">
+                    <h3 class="titulo-hrs">Selecciona una hora</h3>
+                    <div id="lista-horas"></div> <!-- Aquí se mostrarán las horas disponibles -->
+                </div>
+                <div class="detalles-reserva" id="formularioReserva">
+                    <h3>Detalles de la Reservación</h3>
+                    <p><strong>Fecha:</strong> <span id="fecha-seleccionada">No seleccionada</span></p>
+                    <p><strong>Hora:</strong> <span id="hora-seleccionada">No seleccionada</span></p>
+                    <label for="duracion-reserva">Duración de la reservación (en horas): </label>
+                    <div class="num-duracion">
+                        <button id="btnRestar">-</button>
+                        <input type="number" id="duracion-reserva" min="1" max="5" value="1" readonly>
+                        <button id="btnSumar">+</button>
+                    </div>
+                    <button id="btnReservar">Reservar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Popup de confirmación de la reservación -->
+        <dialog id="popupReserva">
+            <div id="contenidoReserva">
+                <h3>Confirmar Reservación</h3>
+                <p><strong>Fecha:</strong> <span id="popupFecha"></span></p>
+                <p><strong>Hora:</strong> <span id="popupHora"></span></p>
+                <p><strong>Duración:</strong> <span id="popupDuracion"></span> horas</p>
+                <button id="btnConfirmar">Confirmar</button>
+                <button id="btnCancelar">Cancelar</button>
+            </div>
+        
+            <div id="confirmacionReserva" style="display: none; text-align: center;">
+                <p style="font-size: 20px; font-weight: bold; color: #4CAF50;">¡Reservación confirmada con éxito!</p>
+                <p style="font-size: 40px;">✅</p>
+                <button id="btnContinuar">Continuar</button>
+            </div>
+        </dialog>                     
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Valkin. Todos los derechos reservados.</p>
+        <p><a href="/privacidad" target="_blank">Aviso de privacidad</a> | <a href="/terminos" target="_blank">Términos y condiciones</a></p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+    <!--AGREGADO PARA REVISAR-->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        /*HEADER FIJO*/
+        let lastScrollTop = 0;
+        let DataConfirmar;
+            const header = document.querySelector("header");
+
+            window.addEventListener("scroll", function () {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollTop > lastScrollTop) {
+                    // Scroll hacia abajo → ocultar header
+                    header.style.top = "-80px";
+                } else {
+                    // Scroll hacia arriba → mostrar header
+                    header.style.top = "0";
+                }
+
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Evitar negativos
+            });
+
+            /*SCRIPT PARA EL MENÚ DESPLAZABLE DEL HEADER*/
+            const menuToggle = document.getElementById('menu-toggle');
+            const navMenu = document.getElementById('nav-menu');
+
+            menuToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
+
+
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            let calendarEl = document.getElementById("calendar");
+            let calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: "dayGridMonth",
+                selectable: true,
+                dateClick: function (info) {
+                    document.getElementById("fecha-seleccionada").textContent = info.dateStr;
+                    actualizarHoras(info.dateStr);
+                }
+            });
+            calendar.render();
+        
+            verificarHorasDisponibles();
+        
+            const popupReserva = document.getElementById("popupReserva");
+            const btnConfirmar = document.getElementById("btnConfirmar");
+            const btnCancelar = document.getElementById("btnCancelar");
+            const btnContinuar = document.getElementById("btnContinuar");
+            const contenidoReserva = document.getElementById("contenidoReserva");
+            const confirmacionReserva = document.getElementById("confirmacionReserva");
+    
+            document.getElementById("btnReservar").addEventListener("click", function () {
+                const fecha = document.getElementById("fecha-seleccionada").textContent;
+                const hora = document.getElementById("hora-seleccionada").textContent;
+                const duracion = document.getElementById("duracion-reserva").value;
+
+
+                fetch("/reservacion", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ fecha, hora, duracion })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        DataConfirmar = data;
+                        abrirPopupReserva(); // Simula la apertura de un popup o acción visual
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al realizar la reservación:", error);
+                    alert("Ocurrió un error al hacer la reservación. Intenta nuevamente.");
+                });
+            });
+    
+            btnCancelar.addEventListener("click", function () {
+                /*cambiar aqui*/
+                popupReserva.close();
+            });
+    
+            btnConfirmar.addEventListener("click", function () {
+            });
+    
+            btnContinuar.addEventListener("click", function () {
+                document.getElementById("fecha-seleccionada").textContent = "No seleccionada";
+                document.getElementById("hora-seleccionada").textContent = "No seleccionada";
+                document.getElementById("lista-horas").innerHTML = "";
+                confirmacionReserva.style.display = "none";
+                contenidoReserva.style.display = "block";
+                popupReserva.close();
+                location.reload();
+            });
+    
+            const btnRestar = document.getElementById("btnRestar");
+            const btnSumar = document.getElementById("btnSumar");
+            const inputDuracion = document.getElementById("duracion-reserva");
+    
+            btnRestar.addEventListener("click", function () {
+                let num = parseInt(inputDuracion.value);
+                if (num > 1) {
+                    inputDuracion.value = num - 1;
+                }
+            });
+    
+            btnSumar.addEventListener("click", function () {
+                let num = parseInt(inputDuracion.value);
+                if (num < 5) {
+                    inputDuracion.value = num + 1;
+                }
+            });
+        });
+    
+        function abrirPopupReserva() {
+            let fechaSeleccionada = document.getElementById("fecha-seleccionada").textContent.trim();
+            let horaSeleccionada = document.getElementById("hora-seleccionada").textContent.trim();
+            let duracionSeleccionada = document.getElementById("duracion-reserva").value.trim();
+
+            // Verificar que la fecha y hora estén seleccionadas
+            if (fechaSeleccionada === "No seleccionada" || horaSeleccionada === "No seleccionada") {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Falta información',
+                    text: 'Por favor, selecciona una fecha y una hora antes de continuar.'
+                });
+                return;
+            }
+
+            // Almacenar los datos de la reserva
+            const datosReserva = {
+                fecha: fechaSeleccionada,
+                hora: horaSeleccionada,
+                duracion: duracionSeleccionada
+            };
+
+            // Mostrar el modal de confirmación con los detalles de la reserva
+            Swal.fire({
+                title: 'Confirmar Reservación',
+                html: `
+                    <p><strong>Fecha:</strong> ${datosReserva.fecha}</p>
+                    <p><strong>Hora:</strong> ${datosReserva.hora}</p>
+                    <p><strong>Duración:</strong> ${datosReserva.duracion} horas</p>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar',
+                confirmButtonColor: '#3e5064',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Lógica para confirmar la reserva
+                    if (typeof DataConfirmar !== 'undefined' && DataConfirmar.success) {
+                        const confirmacionData = {
+                            id_reserva: DataConfirmar.id_reserva,
+                            duracion: DataConfirmar.duracion
+                        };
+
+                        // Enviar la confirmación al servidor
+                        fetch("/confirmar_reservacion", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(confirmacionData)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("Reserva confirmada con éxito.");
+                                location.reload();
+                            } else {
+                                alert(`Error: ${data.error}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error al confirmar la reserva:", error);
+                            alert("Ocurrió un error al confirmar la reserva. Intenta nuevamente.");
+                        });
+                    } else {
+                        alert("No se ha realizado una reserva válida.");
+                    }
+                } else if (result.isDismissed) {
+                    // Si el usuario cancela la reserva, eliminarla
+                    if (typeof DataConfirmar !== 'undefined' && DataConfirmar.id_reserva) {
+                        const id_reserva = DataConfirmar.id_reserva;
+
+                        // Llamar a la ruta para eliminar la reserva pendiente
+                        fetch(`/eliminar_reserva/${id_reserva}`, {
+                            method: "DELETE"
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message) {
+                                alert("Reserva eliminada con éxito.");
+                            } else {
+                                alert(`Error: ${data.error}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error al eliminar la reserva:", error);
+                            alert("Ocurrió un error al eliminar la reserva. Intenta nuevamente.");
+                        });
+                    } else {
+                        alert("No se ha encontrado una reserva para eliminar.");
+                    }
+                }
+            });
+        }
+
+        /*TERMINA AQUÍ LOS CAMBIOS*/
+    
+        function actualizarHoras(fechaSeleccionada) {
+                const horasDisponibles = generarHorasDisponibles();
+                const listaHoras = document.getElementById("lista-horas");
+                listaHoras.innerHTML = "";
+                horasDisponibles.forEach(function (hora) {
+                    const horaElemento = document.createElement("div");
+                    horaElemento.classList.add("hora");
+                    horaElemento.textContent = hora + ":00";  // Se agrega el sufijo ":00"
+                    horaElemento.addEventListener("click", function () {
+                        document.getElementById("hora-seleccionada").textContent = hora + ":00";
+                    });
+                    listaHoras.appendChild(horaElemento);
+                });
+            }
+
+            function generarHorasDisponibles() {
+                const horas = [];
+                for (let i = 0; i < 24; i++) {
+                    const hora = i.toString().padStart(2, "0"); // Esto garantiza el formato de dos dígitos.
+                    horas.push(hora);
+                }
+                return horas;
+            }
+
+        /*V5.3*/
+        function verificarHorasDisponibles() {
+            fetch("/horas_disponibles")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const horasDisponibles = data.horas_restantes;
+
+                        if (horasDisponibles > 0) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Horas disponibles',
+                                text: `Tienes ${horasDisponibles} hora(s).`,
+                                confirmButtonText: 'Continuar',
+                                confirmButtonColor: '#3e5064'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sin horas disponibles',
+                                text: 'No tienes horas disponibles. Por favor compra un paquete.',
+                                confirmButtonText: 'Ver paquetes' + "\nPuedes comprar un paquete aquí.",
+                                text: data.error + " \nPuedes comprar un paquete aquí.",
+                                showCancelButton: true,
+                                cancelButtonText: 'Cerrar',
+                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = "/paquetes"; // Redirige a paquetes
+                                }
+                            });
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: `Error: ${data.error}`,
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#d33'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al obtener horas:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'Hubo un problema al verificar las horas disponibles. Inténtalo de nuevo más tarde.',
+                        confirmButtonText: 'Cerrar',
+                        confirmButtonColor: '#d33'
+                    });
+                });
+        }
+
+        /*AQUÍ FINALIZA EL CÓDIGO*/
+    
+        function habilitarFormulario(habilitar, horasRestantes) {
+            const formulario = document.getElementById("formularioReserva");
+            const btnReservar = document.getElementById("btnReservar");
+    
+            if (habilitar) {
+                formulario.style.display = "block";
+                btnReservar.disabled = false;
+            } else {
+                formulario.style.display = "none";
+                btnReservar.disabled = true;
+            }
+        }
+    </script>           
+</body>
+</html>
+
+<!-- implementar lo de reservacion  -->

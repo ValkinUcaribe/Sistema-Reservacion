@@ -1,0 +1,175 @@
+<!DOCTYPE html> 
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body> 
+    <header>
+        <div class="header-container">
+            <!-- Botón hamburguesa -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú">☰</button>
+
+            <!-- Logo -->
+            <div class="logo">
+                <a href="/home">
+                    <img src="/static/image/LogoValkin.png" alt="VALKING Logo" height="50">
+                </a>
+            </div>
+
+            <!-- Menú -->
+            <nav id="nav-menu">
+                <ul class="nav-list">
+                    <li><a href="/reservacion">RESERVAR</a></li>
+                    <li><a href="/perfil">MI PERFIL</a></li>
+                    <li><a href="/tienda">TIENDA</a></li>
+                    <li><a href="/tutoriales">TUTORIALES</a></li>
+                    <li><a href="/paquetes">PAQUETES</a></li>
+                    <li><a href="/reservas_page">RESERVAS</a></li>
+                </ul>
+                <div class="user-icon">
+                    
+                    {% if session['user_id'] %}
+                        <span>{{ session['user_nombre'] }}</span>
+                        <a href="/logout" title="Cerrar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% else %}
+                        <a href="/" title="Iniciar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="user-info">
+                <div class="avatar">
+                    <img src="static/image/Piloto.png" alt="user">
+                </div>
+                <div class="user-details">
+                    <h2 id="nombre_usuario">{{ session['user_nombre'] if session['user_id'] else 'Usuario' }}</h2>
+                    <img src="static/image/PILOTO%20PROF.png" alt="Insignia" height="35">
+                    <p>Piloto Estudiante</p>
+                    <p><strong>Horas Activas:</strong> <span id="horas_activas">{{ horas_activas }}</span> HRS</p>
+                </div>
+                <div class="user-stats">
+                    <div class="stats-card">
+                        <p class="stats-title">HORAS DISPONIBLES</p>
+                        <p class="stats-value" id="horas_disponibles">0</p>
+                        <p class="stats-subtitle">HORAS</p>
+                    </div>
+                    <div class="stats-card">
+                        <p class="stats-title">PROMEDIO DE HRS</p>
+                        <p class="stats-value" id="promedio_horas">{{ promedio_horas }}</p>
+                        <p class="stats-subtitle">HRS/SEMANA</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flight-section">
+                <div class="next-flight" id="next-flight">
+                    <p>Cargando reserva...</p>
+                </div>
+                <div class="agenda" id="agenda">
+                    <h3>AGENDA</h3>
+                    <p>Cargando reservas...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Valkin. Todos los derechos reservados.</p>
+        <p><a href="/privacidad" target="_blank">Aviso de privacidad</a> | <a href="/terminos" target="_blank">Términos y condiciones</a></p>
+    </footer>
+
+    <!-- Script para obtener datos dinámicos -->
+    <script>
+        /*HEADER FIJO*/
+        let lastScrollTop = 0;
+            const header = document.querySelector("header");
+
+            window.addEventListener("scroll", function () {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollTop > lastScrollTop) {
+                    // Scroll hacia abajo → ocultar header
+                    header.style.top = "-80px";
+                } else {
+                    // Scroll hacia arriba → mostrar header
+                    header.style.top = "0";
+                }
+
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Evitar negativos
+            });
+
+            /*SCRIPT PARA EL MENÚ DESPLAZABLE DEL HEADER*/
+            const menuToggle = document.getElementById('menu-toggle');
+            const navMenu = document.getElementById('nav-menu');
+
+            menuToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
+
+
+
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Obtener horas disponibles
+            fetch("/horas_disponibles")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("horas_disponibles").innerText = data.success ? data.horas_restantes : 0;
+                })
+                .catch(error => console.error("Error al obtener horas disponibles:", error));
+
+            // Obtener reservas más cercanas
+            fetch("/reservas_cercanas")
+                .then(response => response.json())
+                .then(data => {
+                    let nextFlight = document.getElementById("next-flight");
+                    let agenda = document.getElementById("agenda");
+
+                    if (data.success && data.reservas.length > 0) {
+                        let reservas = data.reservas;
+
+                        // Mostrar reserva más cercana
+                        nextFlight.innerHTML = reservas.length > 0 ? `
+                            <img src="static/image/Prepar3D1.jpg" alt="Prepar3D">
+                            <div class="flight-info">
+                                <h3>Prepar3D</h3>
+                                <p>📅 ${reservas[0].fecha_formateada} | ⏰ ${reservas[0].hora_inicio} - ${reservas[0].hora_fin}</p>
+                                <p>👨‍🏫 ${data.usuario || 'Usuario'}</p>
+                                <button>Iniciar Vuelo →</button>
+                            </div>
+                        ` : "<p>No hay reservas próximas.</p>";
+
+                        // Mostrar otras reservas en la agenda
+                        let agendaHtml = "<h3>AGENDA</h3>";
+                        for (let i = 1; i < reservas.length; i++) {
+                            agendaHtml += `
+                                <div class="class-box">
+                                    📅 ${reservas[i].fecha_formateada} <br> ⏰ ${reservas[i].hora_inicio} - ${reservas[i].hora_fin}
+                                </div>
+                            `;
+                        }
+                        agenda.innerHTML = agendaHtml;
+                    } else {
+                        nextFlight.innerHTML = "<p>No hay reservas próximas.</p>";
+                        agenda.innerHTML = "<p>No hay reservas cercanas.</p>";
+                    }
+                })
+                .catch(error => console.error("Error al obtener reservas:", error));
+        });
+    </script>
+</body>
+</html>

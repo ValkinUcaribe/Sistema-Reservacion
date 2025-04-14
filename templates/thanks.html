@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gracias por tu compra</title>
+    <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/thanks.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    
+</head>
+<body>
+    <div class="modal-box">
+        <i class="fa-solid fa-shopping-bag icon"></i>
+        <p class="order-number">Número de pedido: {{ payment_id }}</p>
+        <h2>¡Gracias por tu compra!</h2>
+        <p>Tu pago fue procesado exitosamente.</p>
+        <hr>
+        {% if amount_total and status and payment_id %}
+            <p><strong>Monto total:</strong> ${{ amount_total }} {{currency or 'MX' }}</p>
+            <p><strong>Estado del pago:</strong> {{ status }}</p>
+            {% if customer_email %}
+                <p><strong>Correo electrónico:</strong> {{ customer_email }}</p>
+            {% endif %}
+            {% if customer_name %}
+                <p><strong>Nombre del cliente:</strong> {{ customer_name }}</p>
+            {% endif %}
+            {% if location_full %}
+                <p><strong>Ubicación:</strong> {{ location_full }}</p>
+            {% endif %}
+            {% if fecha_pago %}
+                <p><strong>Fecha del pago:</strong> {{ fecha_pago }}</p>
+            {% endif %}
+            {% if fecha_caducidad %}
+                <p><strong>Fecha de caducidad:</strong> {{ fecha_caducidad }}</p>
+            {% endif %}
+        {% else %}
+            <p class="text-danger">Hubo un error al recuperar los detalles del pago. Por favor, contacta con soporte.</p>
+        {% endif %}
+        <div>
+            <a class="btn-secondary" href="/paquetes">Continuar comprando</a>
+            <a class="btn-custom" href="/reservacion">Reservar</a>
+        </div>
+        <footer class="footer mt-3">
+            <p>&copy; 2025 Valkin. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+</body>
+</html>

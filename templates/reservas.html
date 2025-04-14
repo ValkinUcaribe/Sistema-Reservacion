@@ -1,0 +1,121 @@
+<!DOCTYPE html>  
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Reservas</title>
+    <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/reservas.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <!-- Botón hamburguesa -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú">☰</button>
+
+            <!-- Logo -->
+            <div class="logo">
+                <a href="/home">
+                    <img src="/static/image/LogoValkin.png" alt="VALKING Logo" height="50">
+                </a>
+            </div>
+
+            <!-- Menú -->
+            <nav id="nav-menu">
+                <ul class="nav-list">
+                    <li><a href="/reservacion">RESERVAR</a></li>
+                    <li><a href="/perfil">MI PERFIL</a></li>
+                    <li><a href="/tienda">TIENDA</a></li>
+                    <li><a href="/tutoriales">TUTORIALES</a></li>
+                    <li><a href="/paquetes">PAQUETES</a></li>
+                    <li><a href="/reservas_page">RESERVAS</a></li>
+                </ul>
+                <div class="user-icon">
+                    
+                    {% if session['user_id'] %}
+                        <span>{{ session['user_nombre'] }}</span>
+                        <a href="/logout" title="Cerrar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% else %}
+                        <a href="/" title="Iniciar Sesión">
+                            <i class="fa-solid fa-user"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="reservas">
+        <h1>Reservas activas</h1>
+
+        {% if reservas %}
+            <ul id="reservas-list">
+                {% for reserva in reservas %}
+                    <li>
+                        <strong>Reserva ID:</strong> {{ reserva.id_reserva }} <br>
+                        <strong>Fecha:</strong> {{ reserva.fecha_reserva }} <br>
+                        <strong>Duración:</strong> {{ reserva.duracion }} <br>
+                        <button onclick="generarToken({{ reserva.id_reserva }})">Generar Token</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="no-reservas">No tienes reservas activas.</p>
+        {% endif %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Valkin. Todos los derechos reservados.</p>
+        <p><a href="/privacidad" target="_blank">Aviso de privacidad</a> | <a href="/terminos" target="_blank">Términos y condiciones</a></p>
+    </footer>
+
+    <script>
+        /*HEADER FIJO*/
+        let lastScrollTop = 0;
+            const header = document.querySelector("header");
+
+            window.addEventListener("scroll", function () {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollTop > lastScrollTop) {
+                    // Scroll hacia abajo → ocultar header
+                    header.style.top = "-80px";
+                } else {
+                    // Scroll hacia arriba → mostrar header
+                    header.style.top = "0";
+                }
+
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Evitar negativos
+            });
+
+            /*SCRIPT PARA EL MENÚ DESPLAZABLE DEL HEADER*/
+            const menuToggle = document.getElementById('menu-toggle');
+            const navMenu = document.getElementById('nav-menu');
+
+            menuToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
+
+
+        async function generarToken(id_reserva) {
+            const response = await fetch('/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id_reserva: id_reserva })
+            });
+
+            const data = await response.json();
+            if (data.hashed_token) {
+                alert(`Token generado: ${data.hashed_token}`);
+            } else {
+                alert(data.error || 'Error al generar el token');
+            }
+        }
+    </script>
+</body>
+</html>
