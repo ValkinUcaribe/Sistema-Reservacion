@@ -188,6 +188,7 @@ correo_usuario = None
 pin = None
 pin_timestamp = None  # Tiempo en que se generó el PIN
 PIN_EXPIRATION_SECONDS = 300  # Por ejemplo, 5 minutos
+id_paquete_seleccionado = 0 
 
 # banderas
 usuario_google = False
@@ -242,6 +243,7 @@ def login():
                     session['user_nombre'] = user['nombre']  # Guarda el nombre del usuario en la sesión
                     id_usuario_global = user['id_usuario']
                     nombre_usuario = user['nombre']
+                    
 
                     usuario_normal = True
                     usuario_google = False
@@ -1473,7 +1475,7 @@ def stripe_pay():
 
     data = request.json
     horas = data.get("horas")
-    precio_cliente = data.get("precio")  # Precio enviado desde el frontend
+    precio_cliente = data.get("precio")
 
     print(f"Datos recibidos - Horas: {horas}, Precio cliente: {precio_cliente}")
 
@@ -1484,30 +1486,42 @@ def stripe_pay():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
-        # Buscar paquete exacto por horas
+        # Buscar paquete exacto
         cursor.execute("SELECT id_paquete, descripcion, precio FROM Paquetes WHERE horas = %s", (horas,))
         paquete = cursor.fetchone()
 
-        # Si no se encuentra, buscar uno más cercano hacia arriba
         if not paquete:
             print(f"No se encontró paquete con {horas} horas. Buscando uno con más horas o igual.")
             cursor.execute("""
                 SELECT id_paquete, descripcion, precio FROM Paquetes
-                WHERE horas >= %s
+                WHERE horas > %s
                 ORDER BY horas ASC
                 LIMIT 1
             """, (horas,))
             paquete = cursor.fetchone()
 
-            # Si sigue sin encontrarse, error
             if not paquete:
-                return jsonify({"error": "No se encontró ningún paquete con horas iguales o mayores"}), 404
+                print("No se encontró uno mayor. Buscando uno con menos horas.")
+                cursor.execute("""
+                    SELECT id_paquete, descripcion, precio FROM Paquetes
+                    WHERE horas < %s
+                    ORDER BY horas DESC
+                    LIMIT 1
+                """, (horas,))
+                paquete = cursor.fetchone()
 
-            # Sobrescribir el precio enviado desde frontend por el que viene de la DB
-            precio_usado = float(paquete["precio"])
-            print(f"Usando precio desde DB: {precio_usado}")
+                if not paquete:
+                    return jsonify({"error": "No se encontró ningún paquete cercano a las horas solicitadas"}), 404
+
+                # Usar precio del paquete con menos horas
+                precio_usado = float(paquete["precio"])
+                print(f"Usando paquete con menos horas. Precio desde DB: {precio_usado}")
+            else:
+                # Usar precio del paquete con más horas
+                precio_usado = float(paquete["precio"])
+                print(f"Usando paquete con más horas. Precio desde DB: {precio_usado}")
         else:
-            # Usar el precio que viene desde el frontend (porque las horas coinciden)
+            # Paquete exacto encontrado
             precio_usado = float(precio_cliente)
             print(f"Usando precio del cliente: {precio_usado}")
 
@@ -1515,7 +1529,7 @@ def stripe_pay():
         id_paquete = paquete["id_paquete"]
         precio_centavos = int(precio_usado * 100)
 
-        # Crear la sesión de pago
+        # Crear la sesión de pago con Stripe
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
@@ -1530,7 +1544,7 @@ def stripe_pay():
             }],
             mode='payment',
             success_url=url_for('thanks', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=url_for('tienda', _external=True),
+            cancel_url=url_for('paquetes', _external=True),
             metadata={
                 'id_paquete': id_paquete
             }
@@ -1565,10 +1579,11 @@ def stripe_pay():
 # Ruta para confirmar el pago y asociarlo a la reserva
 @app.route('/thanks')
 def thanks():
+    # Variables globales de control
     global usuario_google, usuario_normal, id_usuario_global
     session_id = request.args.get('session_id')
 
-    cursor = None  # Inicializamos para evitar errores si falla antes
+    cursor = None
     connection = None
 
     if not session_id:
@@ -1580,41 +1595,34 @@ def thanks():
         if session.payment_status != 'paid':
             return jsonify({"error": "El pago no fue completado correctamente"}), 400
 
-        amount_total = session.get('amount_total', None)
-        amount_total = amount_total / 100 if amount_total else None
-        status = session.get('payment_status', None)
+        # Obtener datos clave desde la sesión
+        amount_total = session.get('amount_total', 0) / 100
+        status = session.get('payment_status', 'Desconocido')
         customer_email = session.get('customer_email', 'No disponible')
         customer_name = session.get('customer_details', {}).get('name', 'No disponible')
-
-        # Obtener la ubicación y hora local
-        ubicacion_y_hora = obtener_ubicacion_y_hora()
-
-        # Convertir la fecha de string a datetime
-        fecha_pago_str = ubicacion_y_hora["fecha_local"]
         
-        # Intentar convertir la fecha, manejando casos donde la hora no esté presente
+        # Obtener id_paquete desde el metadata de Stripe (variable local, no global ni en session)
+        id_paquete_str = session.get('metadata', {}).get('id_paquete')
+        if not id_paquete_str:
+            return jsonify({"error": "No se encontró id_paquete en el metadata"}), 400
+
+        id_paquete = int(id_paquete_str)
+
+        # Obtener ubicación y hora local
+        ubicacion_y_hora = obtener_ubicacion_y_hora()
+        fecha_pago_str = ubicacion_y_hora["fecha_local"]
+
+        # Convertir la fecha
         try:
-            # Intentar convertir al formato con hora
             fecha_pago = datetime.strptime(fecha_pago_str, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            # Si no tiene hora, convertir solo la fecha
             fecha_pago = datetime.strptime(fecha_pago_str, "%Y-%m-%d")
-        
+
         location_full = ubicacion_y_hora["ubicacion_completa"]
 
+        # Consultar los días de caducación del paquete
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
-
-        # Buscar el id_paquete basado en el precio (monto pagado)
-        cursor.execute("SELECT id_paquete FROM Paquetes WHERE precio = %s", (amount_total,))
-        paquete = cursor.fetchone()
-
-        if not paquete:
-            return jsonify({"error": "No se encontró un paquete con ese monto"}), 404
-
-        id_paquete = paquete["id_paquete"]
-
-        # Obtener la cantidad de días de caducación del paquete
         cursor.execute("SELECT caducacion FROM Paquetes WHERE id_paquete = %s", (id_paquete,))
         paquete_info = cursor.fetchone()
 
@@ -1622,40 +1630,38 @@ def thanks():
             return jsonify({"error": "No se encontró información de caducidad para el paquete"}), 404
 
         caducacion_dias = paquete_info["caducacion"]
-
-        # Calcular la fecha_caducidad sumando los días de caducación a la fecha_pago
         fecha_caducidad = fecha_pago + timedelta(days=caducacion_dias)
 
-        # Determinar qué ID de usuario almacenar
+        # Determinar el ID de usuario según el tipo
         id_usuario = id_usuario_global
-        print(id_usuario)
-
-        # Insertar el pago en la tabla 'Pagos', incluyendo la ubicación
+        print(f"ID Usuario: {id_usuario}")
         print(f"Usuario Google: {usuario_google}, Usuario Normal: {usuario_normal}")
+
+        # Insertar pago en la base de datos
         if usuario_google:
             cursor.execute(""" 
                 INSERT INTO Pagos (monto, fecha_pago, estado, id_paquete, id_usuario, id_usuario_google, estado_paquete, fecha_caducidad, ubicacion) 
                 VALUES (%s, %s, %s, %s, NULL, %s, %s, %s, %s) 
-            """, (amount_total, fecha_pago, status, id_paquete, id_usuario, "no consumido", fecha_caducidad, location_full))  # Incluye la ubicación
+            """, (amount_total, fecha_pago, status, id_paquete, id_usuario, "no consumido", fecha_caducidad, location_full))
         elif usuario_normal:
             cursor.execute(""" 
                 INSERT INTO Pagos (monto, fecha_pago, estado, id_paquete, id_usuario, id_usuario_google, estado_paquete, fecha_caducidad, ubicacion) 
                 VALUES (%s, %s, %s, %s, %s, NULL, %s, %s, %s) 
-            """, (amount_total, fecha_pago, status, id_paquete, id_usuario, "no consumido", fecha_caducidad, location_full))  # Incluye la ubicación
+            """, (amount_total, fecha_pago, status, id_paquete, id_usuario, "no consumido", fecha_caducidad, location_full))
         else:
-            print("⚠️ Error: No se ha detectado si es usuario normal o de Google.")
+            print("⚠️ No se detectó tipo de usuario válido.")
 
         connection.commit()
-        id_pago = cursor.lastrowid  # Obtener el ID del pago recién insertado
+        id_pago = cursor.lastrowid
 
-        # Responder con los detalles del pago
+        # Renderizar página de agradecimiento
         return render_template('thanks.html', 
                                customer_email=customer_email,
-                               amount_total=amount_total if amount_total else 0,
-                               currency='USD',
-                               status=status if status else 'Desconocido',
+                               amount_total=amount_total,
+                               currency='MXN',
+                               status=status,
                                customer_name=customer_name,
-                               payment_id=id_pago if id_pago else 'N/A')
+                               payment_id=id_pago)
 
     except mysql.connector.Error as db_error:
         return jsonify({"error": f"Error en la base de datos: {str(db_error)}"}), 500
