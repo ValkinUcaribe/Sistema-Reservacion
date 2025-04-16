@@ -19,26 +19,9 @@ from PIL import Image
 import io
 import base64
 from dotenv import load_dotenv
-from functools import wraps
 
 load_dotenv()
 
-def user_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or session.get('tipo_usuario') not in ['normal', 'google']:
-            return redirect('/')
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or session.get('tipo_usuario') != 'admin':
-            return redirect('/')
-        return f(*args, **kwargs)
-    return decorated_function
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Función para generar un PIN aleatorio de 6 dígitos
 def generar_pin():
     return ''.join(random.choices(string.digits, k=6))
@@ -260,9 +243,13 @@ def login():
                     session['user_nombre'] = user['nombre']  # Guarda el nombre del usuario en la sesión
                     id_usuario_global = user['id_usuario']
                     nombre_usuario = user['nombre']
-                    session['tipo_usuario'] = 'normal'
+                    
+
                     usuario_normal = True
                     usuario_google = False
+                    print(nombre_usuario)
+                    print(usuario_normal)
+                    print(usuario_google)
 
                     # Redirige al usuario a la ruta 'home' después de un login exitoso
                     return redirect(url_for('home'))
@@ -540,58 +527,59 @@ def olvido():
 # Función para entrar al home de la página
 # ver la forma de tomar las reservaciones y cambiar lo de microsft tanto nombre como imagen
 @app.route('/home', methods=['GET', 'POST'])
-@user_required
 def home():
-    user_id = session.get('user_id')
-    user_nombre = session.get('user_nombre')
-    tipo_usuario = session.get('tipo_usuario')
+    global nombre_usuario, usuario_google, usuario_normal, id_usuario_global
+
+    # 🔒 Verificación de autenticación
+    if not (usuario_google or usuario_normal):
+        return redirect(url_for('login'))
 
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
-        # Obtener la fecha y hora local
+        # Obtener la fecha y hora local utilizando la función obtener_ubicacion_y_hora()
         info_local = obtener_ubicacion_y_hora()
         fecha_local = info_local["fecha_local"]
         hora_local = info_local["hora_local"]
         fecha_hora_local = f"{fecha_local} {hora_local}"
 
         # 🔹 Determinar filtro según tipo de usuario
-        if tipo_usuario == "normal":
+        if usuario_normal:
             filtro_usuario = "id_usuario = %s"
-        elif tipo_usuario == "google":
+            valor_usuario = id_usuario_global
+        elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
-        else:
-            return "Tipo de usuario no válido", 400
+            valor_usuario = id_usuario_global
 
-        # 🔹 Actualizar reservas vencidas a 'caducado'
+        # 🔹 Actualizar reservas vencidas a 'caducado' si la fecha_reserva es menor a la fecha actual
         cursor.execute(f"""
             UPDATE Reservas
             SET estado_reserva = 'caducado'
-            WHERE {filtro_usuario}
+            WHERE {filtro_usuario} 
             AND estado_reserva = 'activo'
             AND DATE(fecha_reserva) < %s
-        """, (user_id, fecha_local))
+        """, (valor_usuario, fecha_local))
         connection.commit()
 
-        # 🔹 Obtener la suma total de horas utilizadas
+        # 🔹 Obtener la suma total de horas utilizadas (Horas Activas)
         cursor.execute(f"""
             SELECT COALESCE(SUM(horas_utilizadas), 0) AS horas_activas 
             FROM HorasPaquete 
             WHERE {filtro_usuario}
-        """, (user_id,))
+        """, (valor_usuario,))
         horas_activas = cursor.fetchone()["horas_activas"]
 
         # 🔹 Calcular el promedio de horas utilizadas en la última semana
         cursor.execute(f"""
             SELECT COALESCE(ROUND(AVG(horas_utilizadas), 1), 0) AS promedio_horas
             FROM HorasPaquete
-            WHERE {filtro_usuario}
+            WHERE {filtro_usuario} 
             AND fecha_pago >= %s
-        """, (user_id, fecha_hora_local))
+        """, (valor_usuario, fecha_hora_local))
         promedio_horas = cursor.fetchone()["promedio_horas"]
 
-        print(user_nombre)
+        print(nombre_usuario)
         print(horas_activas)
         print(promedio_horas)
 
@@ -603,48 +591,47 @@ def home():
         cursor.close()
         connection.close()
 
-    return render_template('home.html', user=user_nombre, horas_activas=horas_activas, promedio_horas=promedio_horas)
+    # Renderizar la página
+    return render_template('home.html', user=nombre_usuario, horas_activas=horas_activas, promedio_horas=promedio_horas)
 
 # Funcion de los productos de la tienda
 @app.route('/tienda', methods=['POST', 'GET'])
-@user_required
 def tienda():
-    tipo_usuario = session.get('tipo_usuario')
+    global usuario_google, usuario_normal
 
     # 🔒 Verificación de autenticación
-    if tipo_usuario not in ["normal", "google"]:
+    if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
 
     return render_template('tienda.html')
 
 @app.route('/paquetes')
-@user_required
 def paquetes():
-    tipo_usuario = session.get('tipo_usuario')
-    id_usuario = session.get('id_usuario')
+    global usuario_google, usuario_normal, id_usuario_global
 
-    if tipo_usuario not in ["normal", "google"]:
+    if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
 
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
-        # Determinar el filtro de usuario según el tipo
-        if tipo_usuario == "google":
+        # Determinar el filtro de usuario según el tipo de usuario
+        if usuario_google:
             filtro_usuario = "id_usuario_google = %s"
         else:
             filtro_usuario = "id_usuario = %s"
 
         # Verificar si el usuario ha realizado un pago antes
-        cursor.execute(f"SELECT COUNT(*) as total FROM Pagos WHERE {filtro_usuario}", (id_usuario,))
+        cursor.execute(f"SELECT COUNT(*) as total FROM Pagos WHERE {filtro_usuario}", (id_usuario_global,))
         resultado = cursor.fetchone()
         primera_compra = resultado["total"] == 0  # Si el total es 0, significa que nunca ha comprado
 
         # Consultar los paquetes con los campos solicitados
         cursor.execute("""SELECT precio, moneda, horas, caducacion, nombre_paquete FROM Paquetes""")
-        paquetes = cursor.fetchall()
+        paquetes = cursor.fetchall()  # Esto obtendrá todos los registros de paquetes
         
+        # Devolver los paquetes y la información sobre la primera compra
         return render_template('paquetes.html', 
                                primera_compra=primera_compra, 
                                paquetes=paquetes)
@@ -659,12 +646,10 @@ def paquetes():
 # Cambiar para que distinga entre usuario normal y google y verifique disponibilidad de fecha y hora
 # Cambiar para que acepte el forma de fecha y hora del frontend
 @app.route('/reservacion', methods=['GET', 'POST'])
-@user_required
 def reservacion():
-    tipo_usuario = session.get('tipo_usuario')
-    id_usuario = session.get('id_usuario')
+    global usuario_normal, usuario_google, id_usuario_global
 
-    if tipo_usuario not in ['normal', 'google']:
+    if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
 
     if request.method == 'POST':
@@ -702,18 +687,18 @@ def reservacion():
             cursor = connection.cursor(dictionary=True)
             connection.start_transaction()
 
-            if tipo_usuario == "normal":
+            if usuario_normal:
                 filtro_usuario = "id_usuario = %s"
-                valor_usuario = id_usuario
-                id_usuario_insert = id_usuario
+                valor_usuario = id_usuario_global
+                id_usuario_insert = id_usuario_global
                 id_usuario_google_insert = None
-                print("Usuario normal:", id_usuario)
-            else:
+                print("Usuario normal:", id_usuario_global)
+            elif usuario_google:
                 filtro_usuario = "id_usuario_google = %s"
-                valor_usuario = id_usuario
+                valor_usuario = id_usuario_global
                 id_usuario_insert = None
-                id_usuario_google_insert = id_usuario
-                print("Usuario Google:", id_usuario)
+                id_usuario_google_insert = id_usuario_global
+                print("Usuario Google:", id_usuario_global)
 
             # Buscar máquina disponible
             maquina_asignada = None
@@ -760,6 +745,7 @@ def reservacion():
                 id_paquete = pago['id_paquete']
                 print(f"Evaluando id_pago: {id_pago}, id_paquete: {id_paquete}")
 
+                # Verificar si tiene registro en HorasPaquete
                 cursor.execute("""
                     SELECT id_paquete, horas_totales, horas_utilizadas, 
                            (horas_totales - horas_utilizadas) AS horas_restantes
@@ -780,6 +766,7 @@ def reservacion():
                     else:
                         print("No tiene suficientes horas restantes.")
                 else:
+                    # No tiene horas registradas aún, buscar en Paquetes
                     cursor.execute("""
                         SELECT horas FROM Paquetes WHERE id_paquete = %s
                     """, (id_paquete,))
@@ -801,6 +788,7 @@ def reservacion():
                 print("No hay paquetes que cubran la duración solicitada.")
                 return jsonify({"success": False, "error": "No tienes suficientes horas para completar esta reserva"}), 400
 
+            # Insertar reserva
             cursor.execute("""
                 INSERT INTO Reservas (
                     fecha_reserva, duracion, fecha_registro, estado_reserva, 
@@ -812,7 +800,7 @@ def reservacion():
                 maquina_asignada, location_full,
                 id_usuario_insert, id_usuario_google_insert,
                 paquete_seleccionado['id_pago'], paquete_seleccionado['id_paquete'],
-                duracion, fecha_finalizacion
+                duracion,fecha_finalizacion  # El tiempo solicitado es igual a la duración solicitada
             ))
 
             id_reserva = cursor.lastrowid
@@ -838,40 +826,37 @@ def reservacion():
 
     return render_template("reservacion.html")
 
+
 @app.route("/confirmar_reservacion", methods=["POST"])
-@user_required
 def confirmar_reservacion():
+    global usuario_normal, usuario_google, id_usuario_global
     data = request.json
     print(data)
     duracion = data.get("duracion")
-    id_reserva = data.get("id_reserva")
+    id_reserva = data.get("id_reserva")  # ✅ nueva variable
 
     if not duracion or not id_reserva:
         return jsonify({"success": False, "error": "Faltan parámetros"}), 400
-
-    # Obtener datos de sesión
-    user_id = session.get("user_id")
-    user_nombre = session.get("user_nombre")
-
-    if not user_id or not user_nombre:
-        return jsonify({"success": False, "error": "No autenticado"}), 401
 
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
-        # Determinar si es usuario normal o de Google
-        cursor.execute("SELECT id_usuario FROM Usuarios WHERE id_usuario = %s", (user_id,))
-        es_normal = cursor.fetchone() is not None
-
-        if es_normal:
+        # Autenticación con variables globales
+        if usuario_normal:
             filtro_usuario = "id_usuario = %s"
-            id_usuario_insert = user_id
+            valor_usuario = id_usuario_global
+            id_usuario_insert = id_usuario_global
             id_usuario_google_insert = None
-        else:
+            print("Usuario normal:", id_usuario_global)
+        elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
+            valor_usuario = id_usuario_global
             id_usuario_insert = None
-            id_usuario_google_insert = user_id
+            id_usuario_google_insert = id_usuario_global
+            print("Usuario Google:", id_usuario_global)
+        else:
+            return jsonify({"success": False, "error": "No autenticado"}), 401
 
         cursor.execute(f"""
             SELECT id_pago, id_paquete, fecha_pago, fecha_caducidad 
@@ -879,7 +864,7 @@ def confirmar_reservacion():
             WHERE estado = 'paid' AND estado_paquete = 'no consumido' 
             AND {filtro_usuario}
             ORDER BY fecha_pago ASC
-        """, (user_id,))
+        """, (valor_usuario,))
         paquetes = cursor.fetchall()
 
         if not paquetes:
@@ -951,18 +936,26 @@ def confirmar_reservacion():
                     horas_necesarias -= horas_totales
 
         # Marcar paquetes como consumidos si ya no tienen horas restantes
-        cursor.execute("SELECT id_pago FROM HorasPaquete WHERE horas_restantes = 0")
+        cursor.execute("""
+            SELECT id_pago 
+            FROM HorasPaquete 
+            WHERE horas_restantes = 0
+        """)
         pagos_consumidos = cursor.fetchall()
 
         for pago in pagos_consumidos:
-            cursor.execute("UPDATE Pagos SET estado_paquete = 'consumido' WHERE id_pago = %s", (pago['id_pago'],))
+            id_pago_consumido = pago['id_pago']
+            cursor.execute("UPDATE Pagos SET estado_paquete = 'consumido' WHERE id_pago = %s", (id_pago_consumido,))
 
         if horas_necesarias > 0:
             connection.rollback()
             return jsonify({"success": False, "error": "No tienes suficientes horas para completar esta reserva"}), 400
 
-        # Marcar la reserva como activa
-        cursor.execute("UPDATE Reservas SET estado_reserva = 'Activo' WHERE id_reserva = %s", (id_reserva,))
+        # ✅ Actualizar estado_reserva a "Activo"
+        cursor.execute("""
+            UPDATE Reservas SET estado_reserva = 'Activo' WHERE id_reserva = %s
+        """, (id_reserva,))
+
         connection.commit()
 
         return jsonify({
@@ -982,43 +975,41 @@ def confirmar_reservacion():
         connection.close()
 
 @app.route('/eliminar_reserva/<int:id_reserva>', methods=['DELETE'])
-@user_required
 def eliminar_reserva(id_reserva):
+    # Abrir conexión a la base de datos
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # ✅ dictionary=True para acceder con nombres de columna
+    cursor = conn.cursor()
 
-    try:
-        # Verificar si la reserva existe
-        cursor.execute("SELECT * FROM Reservas WHERE id_reserva = %s", (id_reserva,))
-        reserva = cursor.fetchone()
+    # Primero verificar si la reserva existe y si está pendiente
+    cursor.execute("SELECT * FROM Reservas WHERE id_reserva = %s", (id_reserva,))
+    reserva = cursor.fetchone()
+    print(reserva)
 
-        if not reserva:
-            return jsonify({"error": "Reserva no encontrada"}), 404
-
-        if reserva["estado_reserva"].lower() != 'pendiente':  # ✅ más claro con nombres de campo
-            return jsonify({"error": "Solo se pueden eliminar reservas con estado 'pendiente'"}), 400
-
-        # Eliminar la reserva si está pendiente
-        cursor.execute("DELETE FROM Reservas WHERE id_reserva = %s", (id_reserva,))
-        conn.commit()
-
-        return jsonify({"message": "Reserva eliminada con éxito"}), 200
-
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": f"Error al eliminar la reserva: {str(e)}"}), 500
-
-    finally:
-        cursor.close()
+    if not reserva:
         conn.close()
+        return jsonify({"error": "Reserva no encontrada"}), 404
 
+    if reserva[9] != 'pendiente':
+        conn.close()
+        return jsonify({"error": "Solo se pueden eliminar reservas con estatus 'pendiente'"}), 400
+
+    # Si la reserva está pendiente, eliminamos la reserva
+    try:
+        cursor.execute("DELETE FROM Reservas WHERE id_reserva = %s", (id_reserva,))
+        conn.commit()  # Confirmamos los cambios
+        conn.close()
+        return jsonify({"message": "Reserva eliminada con éxito"}), 200
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": f"Error al eliminar la reserva: {str(e)}"}), 500
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@app.route('/horas_disponibles', methods=['GET'])
-@user_required
-def horas_disponibles():
-    print(session.get('user_id'))
 
-    if not (session.get('usuario_normal') or session.get('usuario_google')):
+@app.route('/horas_disponibles', methods=['GET'])
+def horas_disponibles():
+    global usuario_normal, usuario_google, id_usuario_global
+    print(id_usuario_global)
+
+    if not (usuario_normal or usuario_google):
         return jsonify({"success": False, "error": "Usuario no autenticado"}), 400
 
     connection = get_db_connection()
@@ -1026,12 +1017,12 @@ def horas_disponibles():
 
     try:
         # 1️⃣ Determinar filtro según tipo de usuario
-        if session.get('usuario_normal'):
+        if usuario_normal:
             filtro_usuario = "id_usuario = %s"
-            valor_usuario = session.get('user_id')
-        elif session.get('usuario_google'):
+            valor_usuario = id_usuario_global
+        elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
-            valor_usuario = session.get('user_id')
+            valor_usuario = id_usuario_global
         else:
             return jsonify({"success": False, "error": "Usuario no identificado"}), 400
 
@@ -1103,13 +1094,12 @@ def horas_disponibles():
         cursor.close()
         connection.close()
 
-@app.route("/reservas_cercanas", methods=["GET"])
-@user_required
-def obtener_reservas_cercanas():
-    if not (session.get('usuario_normal') or session.get('usuario_google')):
-        return jsonify({"success": False, "error": "Usuario no autenticado"}), 400
 
-    connection = get_db_connection()
+@app.route("/reservas_cercanas", methods=["GET"])
+def obtener_reservas_cercanas():
+    global id_usuario_global, usuario_normal, usuario_google  # Variables globales dentro de la función
+
+    connection = get_db_connection()  
     if connection is None:
         return jsonify({"success": False, "error": "No se pudo conectar a la base de datos"}), 500
 
@@ -1117,9 +1107,9 @@ def obtener_reservas_cercanas():
 
     try:
         # 📌 Determinar el tipo de usuario y aplicar filtro
-        if session.get('usuario_normal'):
+        if usuario_normal:
             filtro_usuario = "id_usuario = %s"
-        elif session.get('usuario_google'):
+        elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
         else:
             return jsonify({"success": False, "error": "Usuario no identificado"}), 400
@@ -1127,7 +1117,7 @@ def obtener_reservas_cercanas():
         # 🕒 Obtener fecha y hora actual
         fecha_actual = datetime.now()
 
-        print(f"🔍 Consultando reservas para usuario ID: {session.get('user_id')} - Fecha actual: {fecha_actual}")
+        print(f"🔍 Consultando reservas para usuario ID: {id_usuario_global} - Fecha actual: {fecha_actual}")
 
         # 1️⃣ CONTAR RESERVAS A CAMBIAR A "inactivo"
         cursor.execute(f"""
@@ -1136,7 +1126,7 @@ def obtener_reservas_cercanas():
             WHERE {filtro_usuario} 
             AND estado_reserva = 'activo' 
             AND DATE_ADD(fecha_reserva, INTERVAL duracion HOUR) < %s
-        """, (session.get('user_id'), fecha_actual))
+        """, (id_usuario_global, fecha_actual))
         total_cambio = cursor.fetchone()["total_cambio"]
 
         print(f"⚠️ Reservas cambiadas a 'inactivo': {total_cambio}")
@@ -1148,7 +1138,7 @@ def obtener_reservas_cercanas():
             WHERE {filtro_usuario} 
             AND estado_reserva = 'activo' 
             AND DATE_ADD(fecha_reserva, INTERVAL duracion HOUR) < %s
-        """, (session.get('user_id'), fecha_actual))
+        """, (id_usuario_global, fecha_actual))
         connection.commit()
         print("✅ Reservas vencidas actualizadas correctamente.")
 
@@ -1163,7 +1153,7 @@ def obtener_reservas_cercanas():
             AND estado_reserva = 'activo' 
             ORDER BY fecha_reserva ASC 
             LIMIT 3
-        """, (session.get('user_id'),))
+        """, (id_usuario_global,))
         
         reservas = cursor.fetchall()
 
@@ -1186,16 +1176,17 @@ def obtener_reservas_cercanas():
 #Se pondra en la bd con ID, ID_usuario o ID_usuario_google, ID_reservacion, y el token hasheado
 #falta implementacion y verificar una cosas
 @app.route('/reservas_page')
-@user_required
 def reservas_page():
+    global id_usuario_global, usuario_normal, usuario_google
+
     # 🔒 Verificación de autenticación
-    if not (session.get('usuario_normal') or session.get('usuario_google')):
+    if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
 
     # Determinar el tipo de usuario y aplicar filtro
-    if session.get('usuario_normal'):
+    if usuario_normal:
         filtro_usuario = "id_usuario = %s"
-    elif session.get('usuario_google'):
+    elif usuario_google:
         filtro_usuario = "id_usuario_google = %s"
     else:
         return redirect(url_for('login'))
@@ -1214,7 +1205,7 @@ def reservas_page():
         FROM Reservas
         WHERE {filtro_usuario} AND estado_reserva = 'Activo'
         """
-        cursor.execute(query, (session.get('user_id'),))
+        cursor.execute(query, (id_usuario_global,))
         
         resultados = cursor.fetchall()
 
@@ -1238,13 +1229,14 @@ def hash_token(token):
     return sha256_hash.hexdigest()
 
 @app.route('/token', methods=['POST'])
-@user_required
 def generar_token():
+    global id_usuario_global, usuario_normal, usuario_google
+
     # 🔒 Verificar si el usuario está autenticado, de lo contrario redirigir a login
-    if not (session.get('usuario_normal') or session.get('usuario_google')):
+    if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
 
-    if not session.get('user_id'):
+    if not id_usuario_global:
         return jsonify({"success": False, "error": "Usuario no identificado"}), 400
 
     # Obtener datos del JSON enviado desde el frontend
@@ -1255,12 +1247,12 @@ def generar_token():
         return jsonify({"success": False, "error": "ID de reserva no proporcionado"}), 400
 
     # 📌 Determinar el filtro y el tipo de usuario
-    if session.get('usuario_normal'):
+    if usuario_normal:
         filtro_usuario = "id_usuario = %s"
-        usuario_id = session.get('user_id')
-    elif session.get('usuario_google'):
+        usuario_id = id_usuario_global
+    elif usuario_google:
         filtro_usuario = "id_usuario_google = %s"
-        usuario_id = session.get('user_id')
+        usuario_id = id_usuario_global
     else:
         return jsonify({"success": False, "error": "Tipo de usuario no identificado"}), 400
 
@@ -1291,7 +1283,7 @@ def generar_token():
         duracion = reserva['duracion']
 
         # 🔐 Generar y hashear el token
-        token = f"T-{reserva['id_reserva']}-{usuario_id}-{fecha_str}-{hora_str}-{duracion}"
+        token = f"T-{reserva['id_reserva']}-{id_usuario_global}-{fecha_str}-{hora_str}-{duracion}"
         hashed_token = hash_token(token)
 
         # Verificar si ya existe un token para esta reserva
@@ -1315,8 +1307,8 @@ def generar_token():
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         cursor.execute(insert_query, (
-            usuario_id if session.get('usuario_normal') else None,
-            usuario_id if session.get('usuario_google') else None,
+            id_usuario_global if usuario_normal else None,
+            id_usuario_global if usuario_google else None,
             id_reserva,
             hashed_token,
             fecha_creacion,
@@ -1334,23 +1326,22 @@ def generar_token():
         if conn:
             conn.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Funcion para modificar perfil
 @app.route('/perfil', methods=['GET', 'POST'])
-@user_required
 def perfil():
     global id_usuario_global, usuario_normal, usuario_google
 
-    # Verificar que el usuario está autenticado
     if not (usuario_normal or usuario_google) or not id_usuario_global:
-        return redirect(url_for('login'))  # Redirigir al login si el usuario no está autenticado
+        return redirect(url_for('login'))
 
-    conn = get_db_connection()  # Conectar a la base de datos
+    conn = get_db_connection()
     if not conn:
-        return "Error al conectar con la base de datos"  # Devolver mensaje si no se puede conectar
+        return "Error al conectar con la base de datos"
 
     cursor = conn.cursor()
 
     if request.method == 'POST':
-        # Obtener datos del formulario de perfil
+        # Obtener datos del formulario
         nombre = request.form.get('nombre')
         apellidos = request.form.get('apellidos')
         correo = request.form.get('correo')
@@ -1359,20 +1350,19 @@ def perfil():
         fecha_nacimiento = request.form.get('fecha_nacimiento')
         tipo_perfil = request.form.get('tipo_perfil')
         institucion = request.form.get('institucion')
-        foto = request.files.get('foto')  # Obtener archivo de imagen
+        foto = request.files.get('foto')
 
-        # Manejo de la actualización del perfil según el tipo de usuario (normal o Google)
         if usuario_normal:
-            if foto and foto.filename != '':  # Si hay una foto cargada
+            if foto and foto.filename != '':
                 try:
                     # Procesar la imagen con Pillow
                     imagen = Image.open(foto)
                     print(f"Imagen cargada correctamente: {foto.filename}")
                     img_io = io.BytesIO()
-                    imagen = imagen.convert('RGB')  # Convertir imagen a RGB
-                    imagen.save(img_io, 'JPEG')  # Guardar la imagen en formato JPEG
+                    imagen = imagen.convert('RGB')  # Asegúrate de convertirla a RGB si no lo está
+                    imagen.save(img_io, 'JPEG')  # Guardarla en formato JPEG o el que prefieras
                     img_io.seek(0)
-                    foto_blob = img_io.read()  # Leer la imagen en formato binario (BLOB)
+                    foto_blob = img_io.read()
                     print(f"Imagen procesada correctamente en formato BLOB")
                     
                     cursor.execute("""
@@ -1384,9 +1374,8 @@ def perfil():
                           fecha_nacimiento, tipo_perfil, institucion, foto_blob, id_usuario_global))
                 except Exception as e:
                     print(f"Error al procesar la imagen: {e}")
-                    return "Error al procesar la imagen."  # Devolver error si no se puede procesar la imagen
+                    return "Error al procesar la imagen."
             else:
-                # Si no se subió foto, solo actualizar los datos de texto
                 cursor.execute("""
                     UPDATE Usuarios
                     SET nombre=%s, apellidos=%s, correo=%s, telefono=%s, direccion=%s,
@@ -1397,14 +1386,15 @@ def perfil():
         elif usuario_google:
             if foto and foto.filename != '':
                 try:
-                    # Procesar la imagen con Pillow para Google
+                    # Procesar la imagen con Pillow
                     imagen = Image.open(foto)
                     print(f"Imagen cargada correctamente: {foto.filename}")
                     img_io = io.BytesIO()
-                    imagen = imagen.convert('RGB')
-                    imagen.save(img_io, 'JPEG')
+                    imagen = imagen.convert('RGB')  # Asegúrate de convertirla a RGB si no lo está
+                    imagen.save(img_io, 'JPEG')  # Guardarla en formato JPEG o el que prefieras
                     img_io.seek(0)
                     foto_blob = img_io.read()
+                    print(f"Imagen procesada correctamente en formato BLOB")
 
                     cursor.execute("""
                         UPDATE Usuarios_Google
@@ -1417,7 +1407,6 @@ def perfil():
                     print(f"Error al procesar la imagen: {e}")
                     return "Error al procesar la imagen."
             else:
-                # Si no hay foto, actualizar solo los datos básicos
                 cursor.execute("""
                     UPDATE Usuarios_Google
                     SET nombre=%s, apellidos=%s, correo=%s, telefono=%s, direccion=%s,
@@ -1426,9 +1415,9 @@ def perfil():
                 """, (nombre, apellidos, correo, telefono, direccion,
                       fecha_nacimiento, tipo_perfil, institucion, id_usuario_global))
 
-        conn.commit()  # Guardar los cambios en la base de datos
+        conn.commit()
 
-    # Para la consulta de datos (GET o después de POST)
+    # GET (o después de POST): cargar datos actualizados
     if usuario_normal:
         cursor.execute("""
             SELECT nombre, apellidos, correo, telefono, direccion, fecha_nacimiento, 
@@ -1442,30 +1431,28 @@ def perfil():
             FROM Usuarios_Google WHERE id_usuario_google = %s
         """, (id_usuario_global,))
 
-    # Recuperar los datos del usuario
     user_data = cursor.fetchone()
     cursor.close()
     conn.close()
 
     if not user_data:
-        return redirect(url_for('login'))  # Si no se encontraron datos, redirigir a login
+        return redirect(url_for('login'))
 
-    # Empaquetar los datos en un diccionario para facilitar su uso
     campos = [
         'nombre', 'apellidos', 'correo', 'telefono', 'direccion', 'fecha_nacimiento',
         'tipo_perfil', 'institucion', 'foto_perfil' if usuario_normal else 'imagen'
     ]
     usuario_dict = dict(zip(campos, user_data))
 
-    # Convertir la imagen BLOB a base64 para mostrarla en el frontend
     imagen_blob = usuario_dict.get('foto_perfil' if usuario_normal else 'imagen')
     if imagen_blob:
         imagen_base64 = base64.b64encode(imagen_blob).decode('utf-8')
         usuario_dict['imagen_base64'] = f"data:image/jpeg;base64,{imagen_base64}"
     else:
-        usuario_dict['imagen_base64'] = '/static/image/LogoAla.png'  # Imagen por defecto
+        usuario_dict['imagen_base64'] = '/static/image/LogoAla.png'
 
-    return render_template('editar_perfil.html', usuario=usuario_dict)  # Renderizar la plantilla con los datos
+    return render_template('editar_perfil.html', usuario=usuario_dict)
+
 
 # Funcion para salir de la sesion
 @app.route('/logout')
@@ -1481,7 +1468,6 @@ def logout():
 # Funcion para el pago de paquetes
 # Ruta para el pago
 @app.route('/stripe_pay', methods=['POST'])
-@user_required
 def stripe_pay():
     stripe_secret_key = app.config.get('STRIPE_SECRET_KEY', '')
     stripe.api_key = stripe_secret_key
@@ -1592,7 +1578,6 @@ def stripe_pay():
 
 # Ruta para confirmar el pago y asociarlo a la reserva
 @app.route('/thanks')
-@user_required
 def thanks():
     # Variables globales de control
     global usuario_google, usuario_normal, id_usuario_global
@@ -1605,23 +1590,22 @@ def thanks():
         return jsonify({"error": "Falta el parámetro session_id"}), 400
 
     try:
-        # Recuperar la sesión de Stripe
         session = stripe.checkout.Session.retrieve(session_id)
 
-        # Verificar que el pago se haya completado
         if session.payment_status != 'paid':
             return jsonify({"error": "El pago no fue completado correctamente"}), 400
 
-        # Obtener datos clave desde la sesión de Stripe
-        amount_total = session.get('amount_total', 0) / 100  # Convertir de centavos a pesos
+        # Obtener datos clave desde la sesión
+        amount_total = session.get('amount_total', 0) / 100
         status = session.get('payment_status', 'Desconocido')
         customer_email = session.get('customer_email', 'No disponible')
         customer_name = session.get('customer_details', {}).get('name', 'No disponible')
-
-        # Obtener id_paquete desde el metadata de Stripe
+        
+        # Obtener id_paquete desde el metadata de Stripe (variable local, no global ni en session)
         id_paquete_str = session.get('metadata', {}).get('id_paquete')
         if not id_paquete_str:
             return jsonify({"error": "No se encontró id_paquete en el metadata"}), 400
+
         id_paquete = int(id_paquete_str)
 
         # Obtener ubicación y hora local
@@ -1714,7 +1698,7 @@ def verificacion_google():
 # Ruta de callback, donde Google redirige después de la autenticación
 @app.route('/callback')
 def callback():
-    global id_usuario_global
+    global nombre_usuario
     try:
         global state_global
         if not state_global:
@@ -1732,37 +1716,28 @@ def callback():
         user_info = obtener_informacion_usuario(credentials)  # Obtenemos los datos de Google
 
         if user_info:
-            # Insertar usuario o recuperar el ID existente
-            insertar_usuario_en_db(user_info)
+            insertar_usuario_en_db(user_info)  # Insertar usuario en la BD si no existe
 
-            # Buscar el ID y nombre en la base de datos usando el correo del usuario
-            try:
-                conn = mysql.connector.connect(**DB_CONFIG)
-                cursor = conn.cursor()
+            session['user'] = {
+                "id": user_info.get("sub"),
+                "nombre": user_info.get("name", "Usuario de Google"),
+                "email": user_info.get("email"),
+                "avatar": user_info.get("picture", "static/image/default-avatar.png")
+            }
 
-                cursor.execute("SELECT id_usuario_google, nombre FROM Usuarios_Google WHERE correo = %s", (user_info['email'],))
-                result = cursor.fetchone()
-
-                if result:
-                    id_usuario_global = result[0]  # Asignamos el ID obtenido desde la BD
-                    session['user_id'] = id_usuario_global
-                    session['user_nombre'] = result[1] if result[1] else "Usuario de Google"
-                    session['tipo_usuario'] = "google"
-                    print(session)
-                else:
-                    return 'Error: Usuario no encontrado después de la inserción.', 400
-
-            except mysql.connector.Error as err:
-                print(f"Error al obtener los datos del usuario: {err}")
-                return 'Error en la base de datos.', 500
-            finally:
-                cursor.close()
-                conn.close()
-
-            return redirect(url_for('home'))  # Redirección simple
+            # Redirigir según el tipo de solicitud
+            if request.headers.get('Accept') == 'application/json':
+                print(usuario_normal)
+                print(usuario_google)
+                return jsonify({
+                    "status": "success",
+                    "message": "Bienvenido",
+                    "user": "usuario google"
+                })
+            else:
+                return redirect(url_for('home'))  
         else:
             return 'Error: No se pudo obtener la información del usuario.', 400
-
     except Exception as e:
         return f'Error en el callback: {str(e)}', 400
 
