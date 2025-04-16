@@ -233,7 +233,7 @@ RUTA_CARPETA = "templates"
 ARCHIVO_HTML = "Codigo_verificacion.html"
 
 # Configuración del remitente y contraseña de donde se va enviar los correos
-REMITENTE = "ucaribe@valkinsim.com"
+REMITENTE=os.getenv("EMAIL_REMITENTE_EMPRESA")
 CONTRASEÑA = os.getenv("EMAIL_CONTRASEÑA")
 
 # Crear conexión global a la base de datos
