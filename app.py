@@ -19,8 +19,25 @@ from PIL import Image
 import io
 import base64
 from dotenv import load_dotenv
+from functools import wraps
 
 load_dotenv()
+
+def user_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or session.get('tipo_usuario') not in ['normal', 'google']:
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or session.get('tipo_usuario') != 'admin':
+            return redirect('/')
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Función para generar un PIN aleatorio de 6 dígitos
 def generar_pin():
@@ -126,16 +143,23 @@ def enviar_correo(remitente, contraseña, destino, asunto, html_modificado):
         email["Reply-To"] = remitente
         email["X-Mailer"] = "Python"
         email["X-Priority"] = "3"
+        
+        # Añadir contenido de texto alternativo en caso de que no se pueda mostrar el HTML
         email.set_content("Este correo contiene HTML. Si no lo ves, revisa tu configuración.", subtype='plain')
-        email.add_alternative(html_modificado, subtype='html')  # Cuerpo del correo en HTML
+        
+        # Añadir contenido HTML
+        email.add_alternative(html_modificado, subtype='html')
 
-        # Configurar SMTP y enviar el correo
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        # Conexión al servidor SMTP de ValkinSim y envío del correo
+        with smtplib.SMTP_SSL("mail.valkinsim.com", 465) as smtp:
+            # Intentar iniciar sesión con las credenciales
             smtp.login(remitente, contraseña)
             smtp.send_message(email)
 
         print(f"📩 Correo enviado exitosamente a {destino}.")
     
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Error de autenticación: las credenciales son incorrectas.")
     except Exception as e:
         print(f"❌ Error al enviar el correo: {e}")
 
@@ -209,7 +233,7 @@ RUTA_CARPETA = "templates"
 ARCHIVO_HTML = "Codigo_verificacion.html"
 
 # Configuración del remitente y contraseña de donde se va enviar los correos
-REMITENTE = os.getenv("EMAIL_REMITENTE")
+REMITENTE = "ucaribe@valkinsim.com"
 CONTRASEÑA = os.getenv("EMAIL_CONTRASEÑA")
 
 # Crear conexión global a la base de datos
