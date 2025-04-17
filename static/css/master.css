@@ -110,6 +110,31 @@ body{
     color: #fff;
 }
 
+/*Mostrar/Ocultar contraseña*/
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper input {
+    padding-right: 40px; /* Espacio para el icono */
+}
+
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #ccc;
+    font-size: 18px;
+    user-select: none;
+}
+
+.toggle-password:hover {
+    color: #fff;
+}
+
+
 /* General styles for social buttons */
 .social-button {
     display: block;
