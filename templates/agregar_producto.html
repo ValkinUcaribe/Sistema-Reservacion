@@ -2,15 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel Admintrador</title>
+  <title>Agregar Paquete</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo">Bienvenido Admin Valkin</div>
-    <a href="{{ url_for('admin_panel') }}" class="active">📊 Dashboard</a>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
     <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
     <a href="{{ url_for('admin_tutoriales') }}">🎓 Tutoriales</a>
     <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
@@ -22,17 +20,28 @@
               <path d="M16 5v14" />
             </svg>
             Cerrar sesión
-          </a>
-          
+          </a>          
     </div>      
     <div class="footer">© 2025 Valkin simuladores</div>
   </aside>
 
-  <!-- Contenido -->
   <main class="content">
-    <h1>Bienvenido al Panel de Administración</h1>
-    <p>Selecciona una sección del menú para comenzar.</p>
-  </main>
+    <h1>Agregar producto</h1>
+    <form method="POST">
+        <label>Nombre del producto</label>
+        <input type="text" name="nombre" required>
 
+        <label>URL de la imagen</label>
+        <input type="text" name="imagen_url" required>
+
+        <label>Descripción</label>
+        <textarea name="descripcion"></textarea>
+
+        <label>LINK de amazon</label>
+        <input type="text" name="link_amazon">
+
+        <button type="submit">Agregar producto</button>
+    </form>
+  </main>
 </body>
 </html>

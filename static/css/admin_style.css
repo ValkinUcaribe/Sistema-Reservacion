@@ -147,6 +147,14 @@ form button:hover {
 .btn-eliminar:hover {
     background-color: #c0392b;
 }  
+
+.tutorial-card {
+    max-width: 500px;       /* Ancho máximo más pequeño */
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
   
 .footer {
     margin-top: auto;

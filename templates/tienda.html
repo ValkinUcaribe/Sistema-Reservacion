@@ -80,6 +80,25 @@
                 </div>
             </div>
         </section>
+    
+    <!--ESTA LINEAS DE CODIGO IRAN REMPLAZANDO LO ANTERIOR PARA QUE FUNCIONE EL ADMIN-->
+    <!--
+        <section class="tienda">
+            <h1>Nuestra Tienda</h1>
+            <p>Explora nuestros productos recomendados para mejorar tu experiencia de simulación de vuelo.</p>
+
+            <div class="productos">
+                {% for producto in productos %}
+                <div class="producto">
+                    <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+                    <h3>{{ producto.nombre }}</h3>
+                    <p>{{ producto.descripcion }}</p>
+                    <a href="{{ producto.link_amazon }}" target="_blank" class="btn-comprar">Comprar en Amazon</a>
+                </div>
+            {% endfor %}
+            </div>
+        </section>
+    -->
     </main>
 
     <!-- Footer -->

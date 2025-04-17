@@ -2,17 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel Admintrador</title>
+  <title>Agregar Tutorial</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo">Bienvenido Admin Valkin</div>
-    <a href="{{ url_for('admin_panel') }}" class="active">📊 Dashboard</a>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
     <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
-    <a href="{{ url_for('admin_tutoriales') }}">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tutoriales') }}" class="active">🎓 Tutoriales</a>
     <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
     <div class="logout-section">
         <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
@@ -22,17 +20,24 @@
               <path d="M16 5v14" />
             </svg>
             Cerrar sesión
-          </a>
-          
+        </a>          
     </div>      
     <div class="footer">© 2025 Valkin simuladores</div>
   </aside>
 
-  <!-- Contenido -->
   <main class="content">
-    <h1>Bienvenido al Panel de Administración</h1>
-    <p>Selecciona una sección del menú para comenzar.</p>
-  </main>
+    <h1>Agregar tutorial</h1>
+    <form method="POST">
+        <label>Título del video</label>
+        <input type="text" name="titulo" required>
 
+        <label>ID del video de YouTube</label>
+        <input type="text" name="video_id" placeholder="Ej: dQw4w9WgXcQ" required>
+
+        <p>La estructura del video será: <code>https://www.youtube.com/embed/&lt;ID&gt;</code></p>
+
+        <button type="submit">Agregar tutorial</button>
+    </form>
+  </main>
 </body>
 </html>

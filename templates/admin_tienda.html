@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tienda</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Bienvenido Admin Valkin</div>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
+    <a href="{{ url_for('admin_tutoriales') }}">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tienda') }}" class="active">🛒 Tienda</a>
+    <div class="logout-section">
+        <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 6l-6 6 6 6" />
+              <path d="M3 12h13" />
+              <path d="M16 5v14" />
+            </svg>
+            Cerrar sesión
+          </a>          
+    </div>      
+    <div class="footer">© 2025 Valkin simuladores</div>
+  </aside>
+
+  <main class="content">
+    <h1>Productos en la Tienda</h1>
+    <a href="{{ url_for('agregar_producto') }}" class="btn">➕ Agregar producto</a>
+  
+    {% if productos %}
+        {% for producto in productos %}
+            <div class="card">
+                <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}" style="max-width: 200px; border-radius: 12px;">
+                <h3>🛍️ {{ producto.nombre }}</h3>
+                <p><strong>📝 Descripción:</strong> {{ producto.descripcion }}</p>
+                <p><strong>🔗 Enlace:</strong> <a href="{{ producto.link_amazon }}" target="_blank">Ver en Amazon</a></p>
+                <div class="actions">
+                    <a href="{{ url_for('editar_producto', producto_id=producto.id) }}" class="btn-editar">✏️ Editar</a>
+                    <a href="{{ url_for('eliminar_producto', producto_id=producto.id) }}" class="btn-eliminar">🗑️ Eliminar</a>
+                </div>              
+            </div>
+        {% endfor %}
+    {% else %}
+      <p>No hay productos aún.</p>
+    {% endif %}
+  </main>  
+</body>
+</html>

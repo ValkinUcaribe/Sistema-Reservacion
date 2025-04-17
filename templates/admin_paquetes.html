@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Paquetes</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <aside class="sidebar">
@@ -11,6 +11,7 @@
     <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
     <a href="{{ url_for('admin_paquetes') }}" class="active">📦 Paquetes</a>
     <a href="#">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
     <div class="logout-section">
         <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
