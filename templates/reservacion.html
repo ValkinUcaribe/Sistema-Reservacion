@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reservar</title>
     <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
-       <link rel="stylesheet" href="/static/css/reservacion.css">
+    <!--<link rel="stylesheet" href="/static/css/reservacion.css"> -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reservacion.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -415,6 +415,49 @@
                                 confirmButtonColor: '#3e5064'
                             });
                         } else {
+                            // No deberías llegar aquí si el backend ya devolvió success: false
+                        }
+
+                    } else {
+                        if (data.error.includes("No tienes horas disponibles")) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sin horas disponibles',
+                                text: data.error,
+                                confirmButtonText: 'Ver paquetes',
+                                showCancelButton: true,
+                                cancelButtonText: 'Cerrar',
+                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = "/paquetes";
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: `Error: ${data.error}`,
+                                confirmButtonText: 'Cerrar',
+                                confirmButtonColor: '#d33'
+                            });
+                        }
+                    }
+                })
+
+                /*.then(data => {
+                    if (data.success) {
+                        const horasDisponibles = data.horas_restantes;
+
+                        if (horasDisponibles > 0) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Horas disponibles',
+                                text: `Tienes ${horasDisponibles} hora(s).`,
+                                confirmButtonText: 'Continuar',
+                                confirmButtonColor: '#3e5064'
+                            });
+                        } else {
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Sin horas disponibles',
@@ -426,7 +469,7 @@
                                 footer: '<a href="/paquetes">Ver paquetes disponibles</a>'
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    window.location.href = "/paquetes"; // Redirige a paquetes
+                                    window.location.href = "/paquetes"; 
                                 }
                             });
                         }
@@ -449,7 +492,7 @@
                         confirmButtonText: 'Cerrar',
                         confirmButtonColor: '#d33'
                     });
-                });
+                });*/
         }
 
         /*AQUÍ FINALIZA EL CÓDIGO*/
