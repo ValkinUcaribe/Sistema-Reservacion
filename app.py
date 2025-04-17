@@ -1107,7 +1107,8 @@ def horas_disponibles():
 
         # 5️⃣ Si no hay horas disponibles, enviar error
         if total_horas == 0:
-            return jsonify({"success": False, "error": "No tienes horas disponibles. Ve a la sección de paquetes."}), 400
+            # return jsonify({"success": False, "error": "No tienes horas disponibles. Ve a la sección de paquetes."}), 400
+            return jsonify({"warning": False, "Sin horas disponibles": "No tienes horas disponibles. Ve a la sección de paquetes.", "Paquetes": "/paquetes"}), 400
 
         # 6️⃣ Devolver el total de horas restantes
         return jsonify({"success": True, "horas_restantes": total_horas})
