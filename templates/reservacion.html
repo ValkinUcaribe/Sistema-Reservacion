@@ -425,9 +425,10 @@
                                 title: 'Sin horas disponibles',
                                 text: data.error,
                                 confirmButtonText: 'Ver paquetes',
+                                confirmButtonColor: '#3e5064',
                                 showCancelButton: true,
-                                cancelButtonText: 'Cerrar',
-                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'
+                                cancelButtonText: 'Cerrar' /*,
+                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'*/
                             }).then((result) => {
                                 if (result.isConfirmed) {
                                     window.location.href = "/paquetes";
