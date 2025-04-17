@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Paquete</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Bienvenido Admin Valkin</div>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
+    <a href="{{ url_for('admin_tutoriales') }}">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
+    <div class="logout-section">
+        <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 6l-6 6 6 6" />
+              <path d="M3 12h13" />
+              <path d="M16 5v14" />
+            </svg>
+            Cerrar sesión
+          </a>          
+    </div>      
+    <div class="footer">© 2025 Valkin simuladores</div>
+  </aside>
+
+  <main class="content">
+    <h1>Agregar nuevo paquete</h1>
+    <form method="POST">
+      <label>Nombre del paquete</label>
+      <input type="text" name="nombre" required>
+
+      <label>Descripción</label>
+      <textarea name="descripcion" required></textarea>
+
+      <label>Precio</label>
+      <input type="number" name="precio" step="0.01" required>
+
+      <label>Moneda</label>
+      <select name="moneda" required>
+        <option>USD</option>
+        <option>MXN</option>
+        <option>EUR</option>
+      </select>
+      
+      <label>Caducación</label>
+      <select name="caducacion" required>
+        <option value="5 días">5 días</option>
+        <option value="10 días">10 días</option>
+        <option value="15 días">15 días</option>
+        <option value="20 días">20 días</option>
+        <option value="30 días">30 días</option>
+        <option value="40 días">40 días</option>
+        <option value="50 días">50 días</option>
+        <option value="60 días">60 días</option>
+      </select>
+
+      <label>Horas</label>
+      <input type="number" name="horas" required>
+
+      <button type="submit">Agregar paquete</button>
+    </form>
+  </main>
+</body>
+</html>

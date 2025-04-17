@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Paquetes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Bienvenido Admin Valkin</div>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_paquetes') }}" class="active">📦 Paquetes</a>
+    <a href="{{ url_for('admin_tutoriales') }}">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
+    <div class="logout-section">
+        <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 6l-6 6 6 6" />
+              <path d="M3 12h13" />
+              <path d="M16 5v14" />
+            </svg>
+            Cerrar sesión
+          </a>          
+    </div>      
+    <div class="footer">© 2025 Valkin simuladores</div>
+  </aside>
+
+  <main class="content">
+    <h1>Paquetes</h1>
+    <a href="{{ url_for('agregar_paquete') }}" class="btn">➕ Agregar paquete</a>
+  
+    {% if paquetes %}
+        {% for paquete in paquetes %}
+            <div class="card">
+                <h3>📦 {{ paquete.nombre }}</h3>
+                <p><strong>📝 Descripción:</strong> {{ paquete.descripcion }}</p>
+                <p><strong>💰 Precio:</strong> {{ paquete.precio }} {{ paquete.moneda }}</p>
+                <p><strong>⏳ Caducación:</strong> {{ paquete.caducacion }}</p>
+                <p><strong>⏱️ Horas:</strong> {{ paquete.horas }}</p>
+                <div class="actions">
+                    <a href="{{ url_for('editar_paquete', paquete_id=paquete.id) }}" class="btn-editar">✏️ Editar</a>
+                    <a href="{{ url_for('eliminar_paquete', paquete_id=paquete.id) }}" class="btn-eliminar">🗑️ Eliminar</a>
+                </div>              
+            </div>
+        {% endfor %}
+    {% else %}
+      <p>No hay paquetes aún.</p>
+    {% endif %}
+  </main>  
+</body>
+</html>

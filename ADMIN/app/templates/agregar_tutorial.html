@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Tutorial</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">Bienvenido Admin Valkin</div>
+    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
+    <a href="{{ url_for('admin_tutoriales') }}" class="active">🎓 Tutoriales</a>
+    <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
+    <div class="logout-section">
+        <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 6l-6 6 6 6" />
+              <path d="M3 12h13" />
+              <path d="M16 5v14" />
+            </svg>
+            Cerrar sesión
+        </a>          
+    </div>      
+    <div class="footer">© 2025 Valkin simuladores</div>
+  </aside>
+
+  <main class="content">
+    <h1>Agregar tutorial</h1>
+    <form method="POST">
+        <label>Título del video</label>
+        <input type="text" name="titulo" required>
+
+        <label>ID del video de YouTube</label>
+        <input type="text" name="video_id" placeholder="Ej: dQw4w9WgXcQ" required>
+
+        <p>La estructura del video será: <code>https://www.youtube.com/embed/&lt;ID&gt;</code></p>
+
+        <button type="submit">Agregar tutorial</button>
+    </form>
+  </main>
+</body>
+</html>
