@@ -669,7 +669,7 @@ def paquetes():
 # Funcion para las reservaciones cambiar
 # Cambiar para que distinga entre usuario normal y google y verifique disponibilidad de fecha y hora
 # Cambiar para que acepte el forma de fecha y hora del frontend
-@app.route('/reservacion', methods=['GET', 'POST'])
+@app.route('/reservacion', methods=['GET', 'POST']) 
 def reservacion():
     global usuario_normal, usuario_google, id_usuario_global
 
@@ -762,57 +762,49 @@ def reservacion():
             pagos_validos = cursor.fetchall()
             print("Pagos válidos encontrados:", pagos_validos)
 
-            paquete_seleccionado = None
+            horas_totales_disponibles = 0
+            paquetes_utilizables = []
 
             for pago in pagos_validos:
                 id_pago = pago['id_pago']
                 id_paquete = pago['id_paquete']
-                print(f"Evaluando id_pago: {id_pago}, id_paquete: {id_paquete}")
 
-                # Verificar si tiene registro en HorasPaquete
+                # Buscar en HorasPaquete
                 cursor.execute("""
-                    SELECT id_paquete, horas_totales, horas_utilizadas, 
-                           (horas_totales - horas_utilizadas) AS horas_restantes
+                    SELECT (horas_totales - horas_utilizadas) AS horas_restantes
                     FROM HorasPaquete 
                     WHERE id_pago = %s AND id_paquete = %s
                 """, (id_pago, id_paquete))
                 horas_registro = cursor.fetchone()
 
                 if horas_registro:
-                    print("Horas encontradas en HorasPaquete:", horas_registro)
-                    if horas_registro['horas_restantes'] >= duracion:
-                        print("Este paquete puede cubrir la duración.")
-                        paquete_seleccionado = {
-                            "id_pago": id_pago,
-                            "id_paquete": id_paquete
-                        }
-                        break
-                    else:
-                        print("No tiene suficientes horas restantes.")
+                    horas_restantes = horas_registro['horas_restantes']
+                    print(f"Horas restantes en HorasPaquete para pago {id_pago}: {horas_restantes}")
                 else:
-                    # No tiene horas registradas aún, buscar en Paquetes
-                    cursor.execute("""
-                        SELECT horas FROM Paquetes WHERE id_paquete = %s
-                    """, (id_paquete,))
+                    # No hay registro aún, tomar del paquete base
+                    cursor.execute("SELECT horas FROM Paquetes WHERE id_paquete = %s", (id_paquete,))
                     paquete_info = cursor.fetchone()
-                    if paquete_info:
-                        print("Horas disponibles desde paquete base:", paquete_info['horas'])
-                        if paquete_info['horas'] >= duracion:
-                            print("Este paquete puede cubrir la duración desde Paquetes.")
-                            paquete_seleccionado = {
-                                "id_pago": id_pago,
-                                "id_paquete": id_paquete
-                            }
-                            break
-                    else:
-                        print("No se encontró información del paquete.")
+                    horas_restantes = paquete_info['horas'] if paquete_info else 0
+                    print(f"Horas del paquete base {id_paquete}: {horas_restantes}")
 
-            if not paquete_seleccionado:
+                if horas_restantes > 0:
+                    horas_totales_disponibles += horas_restantes
+                    paquetes_utilizables.append({
+                        "id_pago": id_pago,
+                        "id_paquete": id_paquete,
+                        "horas_disponibles": horas_restantes
+                    })
+
+            print(f"Total de horas disponibles: {horas_totales_disponibles}")
+
+            if horas_totales_disponibles < duracion:
                 connection.rollback()
-                print("No hay paquetes que cubran la duración solicitada.")
-                return jsonify({"success": False, "error": "No tienes suficientes horas para completar esta reserva"}), 400
+                return jsonify({"success": False, "error": "No tienes suficientes horas entre todos tus paquetes para completar esta reserva"}), 400
 
-            # Insertar reserva
+            # Usar el primer paquete disponible para registrar la reserva
+            paquete_usado = paquetes_utilizables[0]
+
+            # Insertar la reserva
             cursor.execute("""
                 INSERT INTO Reservas (
                     fecha_reserva, duracion, fecha_registro, estado_reserva, 
@@ -823,8 +815,8 @@ def reservacion():
                 fecha_reserva, duracion, fecha_registro, "pendiente",
                 maquina_asignada, location_full,
                 id_usuario_insert, id_usuario_google_insert,
-                paquete_seleccionado['id_pago'], paquete_seleccionado['id_paquete'],
-                duracion,fecha_finalizacion  # El tiempo solicitado es igual a la duración solicitada
+                paquete_usado['id_pago'], paquete_usado['id_paquete'],
+                duracion, fecha_finalizacion
             ))
 
             id_reserva = cursor.lastrowid
@@ -849,7 +841,6 @@ def reservacion():
             connection.close()
 
     return render_template("reservacion.html")
-
 
 @app.route("/confirmar_reservacion", methods=["POST"])
 def confirmar_reservacion():
@@ -1947,14 +1938,13 @@ def datos_dashboard():
         cursor.close()
         connection.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Rutas temporales
-@app.route('/carga', methods=['GET', 'POST'])
-def carga():
-    return render_template('carga.html')
+# Rutas de administrador
 
-@app.route('/acceso_token', methods=['GET', 'POST'])
-def acceso_token():
-    return render_template('acceso_token.html')
+@app.route('/administrador', methods=['GET', 'POST'])
+def administrador_login():
+    username = request.form['username']
+    password = request.form['password']
+    
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #CRUD de la modificacion de los paquetes

@@ -61,6 +61,22 @@
         #btnReservar:hover {
             background-color: #218838;
         }
+       
+        #bloqueo-interaccion {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.6);
+        z-index: 9999;
+        pointer-events: all;
+        cursor: not-allowed;
+        }
+
+        #overlay-wrapper {
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -103,7 +119,7 @@
         </div>
     </header>
 
-    <main>
+    <main id="contenido-principal">
         <div class="contenedor-reserva">
             <div class="tarjeta">
                 <div class="calendario">
@@ -400,51 +416,57 @@
 
         /*V5.3*/
         function verificarHorasDisponibles() {
-            fetch("/horas_disponibles")
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const horasDisponibles = data.horas_restantes;
+        fetch("/horas_disponibles")
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const horasDisponibles = data.horas_restantes;
 
-                        if (horasDisponibles > 0) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Horas disponibles',
-                                text: `Tienes ${horasDisponibles} hora(s).`,
-                                confirmButtonText: 'Continuar',
-                                confirmButtonColor: '#3e5064'
-                            });
-                        } else {
-                            // No deberías llegar aquí si el backend ya devolvió success: false
-                        }
-
-                    } else {
-                        if (data.error.includes("No tienes horas disponibles")) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Sin horas disponibles',
-                                text: data.error,
-                                confirmButtonText: 'Ver paquetes',
-                                confirmButtonColor: '#3e5064',
-                                showCancelButton: true,
-                                cancelButtonText: 'Cerrar' /*,
-                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'*/
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "/paquetes";
-                                }
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: `Error: ${data.error}`,
-                                confirmButtonText: 'Cerrar',
-                                confirmButtonColor: '#d33'
-                            });
-                        }
+                    if (horasDisponibles > 0) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Horas disponibles',
+                            text: `Tienes ${horasDisponibles} hora(s).`,
+                            confirmButtonText: 'Continuar',
+                            confirmButtonColor: '#3e5064'
+                        });
                     }
-                })
+                } else {
+                    if (data.error.includes("No tienes horas disponibles")) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Sin horas disponibles',
+                            text: data.error,
+                            confirmButtonText: 'Ver paquetes',
+                            confirmButtonColor: '#3e5064',
+                            showCancelButton: true,
+                            cancelButtonText: 'Cerrar',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            allowEnterKey: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = "/paquetes";
+                            } else if (result.isDismissed) {
+                                // Crear overlay solo sobre el contenido principal
+                                const contenido = document.getElementById("contenido-principal");
+                                const overlay = document.createElement("div");
+                                overlay.id = "bloqueo-interaccion";
+                                contenido.style.position = "relative";
+                                contenido.appendChild(overlay);
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: `Error: ${data.error}`,
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#d33'
+                        });
+                    }
+                }
+            })
 
                 /*.then(data => {
                     if (data.success) {
