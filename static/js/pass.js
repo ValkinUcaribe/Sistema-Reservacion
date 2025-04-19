@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePassword = document.getElementById('toggle-password');
     const passwordForm = document.getElementById('password-form');
     const responseMessage = document.getElementById('response-message');
-    let isPasswordVisible = false; // Estado del ícono de visibilidad
-    
+    let isPasswordVisible = false;
+
     const rules = {
         length: document.getElementById('length-rule'),
         uppercase: document.getElementById('uppercase-rule'),
@@ -25,38 +25,56 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmPasswordInput.type = isPasswordVisible ? 'text' : 'password';
     });
 
-    // Función para validar reglas de contraseña
+    // Validar reglas visualmente
     function validatePassword(value) {
-        rules.length.style.color = value.length >= 6 ? 'green' : 'red';
+        rules.length.style.color = value.length >= 8 ? 'green' : 'red';
         rules.uppercase.style.color = /[A-Z]/.test(value) ? 'green' : 'red';
         rules.lowercase.style.color = /[a-z]/.test(value) ? 'green' : 'red';
         rules.special.style.color = /[!@#$%^&*(),.?":{}|<>]/.test(value) ? 'green' : 'red';
     }
 
-    // Manejar el envío del formulario
+    // Envío del formulario
     passwordForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Evita envío automático
+        event.preventDefault();
 
-        // Verificar que las contraseñas coincidan
-        if (passwordInput.value !== confirmPasswordInput.value) {
+        const passwordValue = passwordInput.value;
+        const confirmValue = confirmPasswordInput.value;
+
+        if (passwordValue !== confirmValue) {
             showMessage('Las contraseñas no coinciden', 'red');
             return;
         }
 
-        // Verificar que la contraseña cumpla con los requisitos
-        if (passwordInput.value.length < 8) {
+        const lengthValid = passwordValue.length >= 8;
+        const hasUppercase = /[A-Z]/.test(passwordValue);
+        const hasLowercase = /[a-z]/.test(passwordValue);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue);
+
+        if (!lengthValid) {
             showMessage('La contraseña debe tener al menos 8 caracteres', 'red');
             return;
         }
+        if (!hasUppercase) {
+            showMessage('La contraseña debe contener al menos una letra mayúscula', 'red');
+            return;
+        }
+        if (!hasLowercase) {
+            showMessage('La contraseña debe contener al menos una letra minúscula', 'red');
+            return;
+        }
+        if (!hasSpecialChar) {
+            showMessage('La contraseña debe contener al menos un carácter especial', 'red');
+            return;
+        }
 
-        // Enviar los datos al servidor
+        // Si todo está bien, enviar los datos
         const formData = new FormData(passwordForm);
         try {
             const response = await fetch(passwordForm.action, {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (!response.ok) {
                 const errorMessage = await response.text();
                 showMessage(errorMessage || 'Error al procesar la solicitud.', 'red');
@@ -69,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Función para mostrar mensajes de respuesta
     function showMessage(message, color) {
         responseMessage.style.display = 'block';
         responseMessage.style.backgroundColor = color;
