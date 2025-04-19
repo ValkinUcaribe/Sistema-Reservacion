@@ -627,7 +627,19 @@ def tienda():
     if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
 
-    return render_template('tienda.html')
+    # 🛢️ Conexión a la base de datos
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # 🛒 Obtener productos
+    cursor.execute("SELECT * FROM Producto")
+    productos = cursor.fetchall()
+
+    # 🧼 Cerrar conexión
+    cursor.close()
+    conn.close()
+
+    return render_template('tienda.html', productos=productos)
 
 @app.route('/paquetes')
 def paquetes():
@@ -1820,264 +1832,337 @@ def insertar_usuario_en_db(user_info):
         cursor.close()
         conn.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@app.route('/administrador')
-def administrador():
-    return render_template('administrador.html')
-
-@app.route('/datos_dashboard', methods=['GET'])
-def datos_dashboard():
-    connection = get_db_connection()
-    if connection is None:
-        return jsonify({"success": False, "error": "No se pudo conectar a la base de datos"}), 500
-
-    cursor = connection.cursor(dictionary=True)
-
-    try:
-        # 📌 Total de Usuarios
-        cursor.execute("SELECT COUNT(*) AS total_usuarios FROM Usuarios")
-        total_usuarios = cursor.fetchone()["total_usuarios"]
-
-        cursor.execute("SELECT COUNT(*) AS total_usuarios_google FROM Usuarios_Google")
-        total_usuarios_google = cursor.fetchone()["total_usuarios_google"]
-
-        total_general_usuarios = total_usuarios + total_usuarios_google
-
-        # 📌 Total de Pagos
-        cursor.execute("""
-            SELECT 
-                SUM(CASE WHEN id_usuario IS NOT NULL AND estado_paquete = 'consumido' THEN 1 ELSE 0 END) AS normales_consumidos,
-                SUM(CASE WHEN id_usuario IS NOT NULL AND estado_paquete = 'no_consumido' THEN 1 ELSE 0 END) AS normales_no_consumidos,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL AND estado_paquete = 'consumido' THEN 1 ELSE 0 END) AS google_consumidos,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL AND estado_paquete = 'no_consumido' THEN 1 ELSE 0 END) AS google_no_consumidos
-            FROM Pagos
-        """)
-        pagos_totales = cursor.fetchone()
-        total_pagos = sum(pagos_totales.values())
-
-        # 📌 Total de Reservas
-        cursor.execute("""
-            SELECT 
-                SUM(CASE WHEN id_usuario IS NOT NULL THEN 1 ELSE 0 END) AS normales_reservas,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL THEN 1 ELSE 0 END) AS google_reservas
-            FROM Reservas
-        """)
-        reservas_totales = cursor.fetchone()
-        total_reservas = reservas_totales["normales_reservas"] + reservas_totales["google_reservas"]
-
-        # 📌 Obtener datos de Usuarios y Usuarios_Google
-        cursor.execute("""
-            SELECT DATE(fecha_registro) AS fecha, COUNT(*) AS total_usuarios
-            FROM Usuarios
-            GROUP BY DATE(fecha_registro)
-            ORDER BY fecha ASC
-        """)
-        usuarios = cursor.fetchall()
-
-        cursor.execute("""
-            SELECT DATE(fecha_registro) AS fecha, COUNT(*) AS total_usuarios_google
-            FROM Usuarios_Google
-            GROUP BY DATE(fecha_registro)
-            ORDER BY fecha ASC
-        """)
-        usuarios_google = cursor.fetchall()
-
-        # 📌 Obtener datos de Pagos
-        cursor.execute("""
-            SELECT DATE(fecha_pago) AS fecha, 
-                SUM(CASE WHEN id_usuario IS NOT NULL AND estado_paquete = 'consumido' THEN 1 ELSE 0 END) AS normales_consumidos,
-                SUM(CASE WHEN id_usuario IS NOT NULL AND estado_paquete = 'no_consumido' THEN 1 ELSE 0 END) AS normales_no_consumidos,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL AND estado_paquete = 'consumido' THEN 1 ELSE 0 END) AS google_consumidos,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL AND estado_paquete = 'no_consumido' THEN 1 ELSE 0 END) AS google_no_consumidos
-            FROM Pagos
-            GROUP BY DATE(fecha_pago)
-            ORDER BY fecha ASC
-        """)
-        pagos = cursor.fetchall()
-
-        # 📌 Obtener datos de Reservas usando fecha_reserva y ordenadas
-        cursor.execute("""
-            SELECT 
-                DATE(fecha_reserva) AS fecha,
-                estado_reserva,
-                SUM(CASE WHEN id_usuario IS NOT NULL THEN 1 ELSE 0 END) AS usuarios_normales,
-                SUM(CASE WHEN id_usuario_google IS NOT NULL THEN 1 ELSE 0 END) AS usuarios_google
-            FROM Reservas
-            GROUP BY fecha, estado_reserva
-            ORDER BY fecha ASC
-        """)
-        reservas = cursor.fetchall()
-
-        # 📌 Formatear datos en JSON para el frontend
-        return jsonify({
-            "success": True,
-            "totales": {
-                "usuarios": {"total": total_general_usuarios, "normales": total_usuarios, "google": total_usuarios_google},
-                "pagos": {
-                    "total": total_pagos,
-                    "normales_consumidos": pagos_totales["normales_consumidos"],
-                    "normales_no_consumidos": pagos_totales["normales_no_consumidos"],
-                    "google_consumidos": pagos_totales["google_consumidos"],
-                    "google_no_consumidos": pagos_totales["google_no_consumidos"]
-                },
-                "reservas": {
-                    "total": total_reservas,
-                    "normales": reservas_totales["normales_reservas"],
-                    "google": reservas_totales["google_reservas"]
-                }
-            },
-            "usuarios": usuarios,
-            "usuarios_google": usuarios_google,
-            "pagos": pagos,
-            "reservas": reservas
-        })
-
-    except mysql.connector.Error as e:
-        return jsonify({"success": False, "error": f"Error en la base de datos: {e}"}), 500
-
-    finally:
-        cursor.close()
-        connection.close()
-# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Rutas de administrador
-
+#@admin_required
 @app.route('/administrador', methods=['GET', 'POST'])
 def administrador_login():
-    username = request.form['username']
-    password = request.form['password']
+    error = None
+
+    if request.method == 'POST':
+        usuario = request.form['username']
+        password = request.form['password']
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor(dictionary=True, buffered=True)
+                query = "SELECT * FROM Administradores WHERE nombre = %s LIMIT 1"
+                cursor.execute(query, (usuario,))
+                admin = cursor.fetchone()
+
+                if admin and admin['contrasena'] and check_password_hash(admin['contrasena'], password):
+                    session['admin_id'] = admin['id_administrador']
+                    session['admin_nombre'] = admin['nombre']
+                    session['tipo_usuario'] = 'admin'
+                    return redirect(url_for('administrador_panel'))
+                else:
+                    error = 'invalid'
+            except Exception as e:
+                print("Error al consultar administrador:", e)
+                error = 'invalid'
+            finally:
+                cursor.close()
+                connection.close()
+        else:
+            print("No se pudo establecer la conexión con la base de datos.")
+            error = 'invalid'
+
+    return render_template("admin_login.html", error=error)
+
+@app.route('/administrador_panel', methods=['GET', 'POST'])
+@admin_required
+def administrador_panel():
+    return render_template("admin_panel.html")
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@app.route('/administrador_paquetes', methods=['GET'])
+@admin_required
+def administrador_paquetes():
+    if 'tipo_usuario' not in session or session['tipo_usuario'] != 'admin':
+        return redirect(url_for('administrador_login'))
+
+    connection = get_db_connection()
+    paquetes = []
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM Paquetes")
+            paquetes = cursor.fetchall()
+        finally:
+            cursor.close()
+            connection.close()
+
+    return render_template("admin_paquete.html", paquetes=paquetes)
+
+@app.route('/agregar_paquete', methods=['GET', 'POST'])
+@admin_required
+def agregar_paquete():
+    if 'tipo_usuario' not in session or session['tipo_usuario'] != 'admin':
+        return redirect(url_for('administrador_login'))
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        descripcion = request.form['descripcion']
+        precio = request.form['precio']
+        moneda = request.form['moneda']
+        caducacion = request.form['caducacion']
+        horas = request.form['horas']
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+                query = """
+                    INSERT INTO Paquetes (nombre_paquete, descripcion, precio, moneda, caducacion, horas, fecha_creacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                """
+                cursor.execute(query, (nombre, descripcion, precio, moneda, caducacion, horas))
+                connection.commit()
+                flash('Paquete agregado correctamente', 'success')  # Opcional
+                return redirect(url_for('administrador_paquetes'))
+            except Exception as e:
+                print("Error al agregar paquete:", e)
+                flash('Hubo un error al agregar el paquete', 'error')  # Opcional
+            finally:
+                cursor.close()
+                connection.close()
+
+    return render_template("agregar_paquete.html")
+
+@app.route('/editar_paquete/<int:id_paquete>', methods=['GET', 'POST'])
+@admin_required
+def editar_paquete(id_paquete):
+    if 'tipo_usuario' not in session or session['tipo_usuario'] != 'admin':
+        return redirect(url_for('administrador_login'))
+
+    connection = get_db_connection()
+    paquete = None
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        descripcion = request.form['descripcion']
+        precio = request.form['precio']
+        moneda = request.form['moneda']
+        caducacion = request.form['caducacion']
+        horas = request.form['horas']
+
+        if connection:
+            try:
+                cursor = connection.cursor()
+                query = """
+                    UPDATE Paquetes
+                    SET nombre_paquete = %s,
+                        descripcion = %s,
+                        precio = %s,
+                        moneda = %s,
+                        caducacion = %s,
+                        horas = %s
+                    WHERE id_paquete = %s
+                """
+                cursor.execute(query, (nombre, descripcion, precio, moneda, caducacion, horas, id_paquete))
+                connection.commit()
+                return redirect(url_for('administrador_paquetes'))
+            finally:
+                cursor.close()
+                connection.close()
+
+    else:
+        if connection:
+            try:
+                cursor = connection.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM Paquetes WHERE id_paquete = %s", (id_paquete,))
+                paquete = cursor.fetchone()
+                if paquete:
+                    # renombramos para coincidir con los nombres usados en el HTML
+                    paquete['nombre'] = paquete['nombre_paquete']
+            finally:
+                cursor.close()
+                connection.close()
+
+    return render_template('editar_paquete.html', paquete=paquete)
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@app.route('/administrador_tutoriales', methods=['GET', 'POST'])
+@admin_required
+def administrador_tutoriales():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
     
+    cursor.execute("SELECT * FROM Tutorial")
+    tutoriales = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+    
+    return render_template("admin_tutoriales.html", tutoriales=tutoriales)
+
+@app.route('/agregar_tutorial', methods=['GET', 'POST'])
+@admin_required
+def agregar_tutorial():
+    if request.method == 'POST':
+        titulo = request.form['titulo']
+        video_id = request.form['video_id']
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("INSERT INTO Tutorial (titulo, video_id) VALUES (%s, %s)", (titulo, video_id))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return redirect(url_for('administrador_tutoriales'))
+
+    return render_template("agregar_tutorial.html")
+
+@app.route('/editar_tutorial/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def editar_tutorial(id):
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        nuevo_titulo = request.form['titulo']
+        nuevo_video_id = request.form['video_id'] 
+
+        cursor.execute("""
+            UPDATE Tutorial 
+            SET titulo = %s, video_id = %s 
+            WHERE id = %s
+        """, (nuevo_titulo, nuevo_video_id, id))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return redirect(url_for('administrador_tutoriales'))
+
+    # Si es GET: mostrar los datos actuales del tutorial
+    cursor.execute("SELECT * FROM Tutorial WHERE id = %s", (id,))
+    tutorial = cursor.fetchone()
+
+    cursor.close()
+    connection.close()
+
+    return render_template("editar_tutorial.html", tutorial=tutorial)
+
+@app.route('/eliminar_tutorial/<int:id>', methods=['POST'])
+@admin_required
+def eliminar_tutorial(id):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("DELETE FROM Tutorial WHERE id = %s", (id,))
+    connection.commit()
+
+    cursor.close()
+    connection.close()
+
+    return redirect(url_for('administrador_tutoriales'))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#CRUD de la modificacion de los paquetes
-def alert_message(message, redirect_url='/'):
-    return f"<script>alert('{message}'); window.location.href='{redirect_url}';</script>"
+@app.route('/administrador_tienda', methods=['GET'])
+@admin_required
+def administrador_tienda():
+    connection = get_db_connection()
+    productos = []
 
-@app.route('/paquetes_lista', methods=['GET'])
-def paquetes_lista():
+    if connection:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Producto")
+        productos = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+    return render_template("admin_tienda.html", productos=productos)
+
+@app.route('/agregar_producto', methods=['GET', 'POST'])
+@admin_required
+def agregar_producto():
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        imagen_url = request.form['imagen_url']
+        descripcion = request.form['descripcion']
+        link_amazon = request.form['link_amazon']
+
+        connection = get_db_connection()
+        if connection:
+            cursor = connection.cursor()
+            query = """
+                INSERT INTO Producto (nombre, descripcion, imagen_url, link_amazon)
+                VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(query, (nombre, descripcion, imagen_url, link_amazon))
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return redirect(url_for('administrador_tienda'))
+
+    return render_template('agregar_producto.html')
+
+@app.route('/editar_producto/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def editar_producto(id):
     conn = get_db_connection()
-    if conn is None:
-        return "Error al conectar a la base de datos.", 500
+    cursor = conn.cursor(dictionary=True)
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Paquetes")
-    paquetes = cursor.fetchall()
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        descripcion = request.form['descripcion']
+        imagen_url = request.form['imagen_url']
+        link_amazon = request.form['link_amazon']
+
+        query = """
+            UPDATE Producto
+            SET nombre = %s, descripcion = %s, imagen_url = %s, link_amazon = %s
+            WHERE id = %s
+        """
+        cursor.execute(query, (nombre, descripcion, imagen_url, link_amazon, id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return redirect(url_for('administrador_tienda'))
+
+    # GET: Cargar datos del producto
+    cursor.execute("SELECT * FROM Producto WHERE id = %s", (id,))
+    producto = cursor.fetchone()
     cursor.close()
     conn.close()
 
-    paquetes_array = [{
-        "ID": paquete[0],
-        "NOMBRE_PAQUETE": paquete[1],
-        "DESCRIPCION": paquete[2],
-        "PRECIO": float(paquete[3]),
-        "MONEDA": paquete[4],
-        "FECHA_CREACION": paquete[5],
-        "CADUCACION": paquete[6],
-        "HORAS": paquete[7]
-    } for paquete in paquetes]
+    return render_template('editar_producto.html', producto=producto)
 
-    return render_template('paquetes_lista.html', paquetes=paquetes_array)
-
-@app.route('/modificar_paquete/<int:id>', methods=['POST'])
-def modificar_paquete(id):
-    data = request.get_json()
-    nombre_paquete = data.get('nombre_paquete')
-    descripcion = data.get('descripcion')
-    precio = data.get('precio')
-    moneda = data.get('moneda')
-    caducacion = data.get('caducacion')
-    horas = data.get('horas')
-
-    # Validación de los datos
-    if not all([nombre_paquete, descripcion, precio, moneda, caducacion, horas]):
-        return jsonify({"success": False, "message": "Faltan datos requeridos"}), 400
-
-    try:
-        connection = get_db_connection()
-        if connection is None:
-            return jsonify({"success": False, "message": "No se pudo establecer conexión con la base de datos"}), 500
-
-        cursor = connection.cursor()
-
-        # Actualizar los datos en la base de datos
-        cursor.execute('''
-            UPDATE Paquetes SET
-                NOMBRE_PAQUETE = %s,
-                DESCRIPCION = %s,
-                PRECIO = %s,
-                MONEDA = %s,
-                CADUCACION = %s,
-                HORAS = %s
-            WHERE ID_PAQUETE = %s
-        ''', (nombre_paquete, descripcion, precio, moneda, caducacion, horas, id))
-
-        connection.commit()
-        connection.close()
-
-        return jsonify({"success": True, "message": "Paquete modificado con éxito"})
-    except mysql.connector.Error as e:
-        return jsonify({"success": False, "message": f"Error al modificar el paquete: {str(e)}"}), 500
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Error inesperado: {str(e)}"}), 500
-
-@app.route('/eliminar_paquete/<int:id>', methods=['POST'])
-def eliminar_paquete(id):
+@app.route('/eliminar_producto/<int:id>', methods=['POST'])
+@admin_required
+def eliminar_producto(id):
     conn = get_db_connection()
-    if conn is None:
-        return "Error al conectar a la base de datos.", 500
-
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM Paquetes WHERE id_paquete = %s", (id,))
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True})
-    except Exception as e:
-        conn.close()
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/insertar_paquete', methods=['GET', 'POST'])
-def insertar_paquete():
-    if request.method == 'POST':
-        nombre = request.form.get('nombre_paquete')
-        descripcion = request.form.get('descripcion')
-        precio = request.form.get('precio')
-        moneda = request.form.get('moneda')
-        caducacion = request.form.get('caducacion')
-        horas = request.form.get('horas')
-
-        if not nombre or not descripcion or not precio or not moneda or not caducacion or not horas:
-            return alert_message("Todos los campos son obligatorios.")
-
-        conn = get_db_connection()
-        if conn is None:
-            return "Error al conectar a la base de datos.", 500
-
-        try:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO Paquetes (nombre_paquete, descripcion, precio, moneda, caducacion, horas)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            ''', (nombre, descripcion, precio, moneda, caducacion, horas))
-            conn.commit()
-            conn.close()
-            return alert_message("Paquete insertado correctamente.", '/paquetes_lista')
-        except Exception as e:
-            conn.close()
-            return alert_message(f"Error al insertar el paquete: {str(e)}")
-
-    return render_template('insertar_paquete.html')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM Producto WHERE id = %s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for('administrador_tienda'))  # o la ruta que tengas para la vista admin
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@app.route('/tutoriales', methods=['GET','POST'])
+@app.route('/logout_admin')
+def logout_admin():
+    session.clear()
+    # Redirigir al login
+    return redirect(url_for('administrador_login'))
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@app.route('/tutoriales', methods=['GET', 'POST'])
 def tutoriales():
     global id_usuario_global, usuario_normal, usuario_google
 
     # Redirigir a login si el usuario no está autenticado
-    if not (usuario_normal or usuario_google):
+    if not (usuario_normal or usuario_google) or not id_usuario_global:
         return redirect(url_for('login'))
 
-    if not id_usuario_global:
-        return redirect(url_for('login'))
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
 
-    return render_template('tutoriales.html')
+    cursor.execute("SELECT * FROM Tutorial")
+    tutoriales = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return render_template('tutoriales.html', tutoriales=tutoriales)
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Funcionar la API
 if __name__ == '__main__':

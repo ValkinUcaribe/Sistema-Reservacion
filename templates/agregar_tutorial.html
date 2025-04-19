@@ -8,12 +8,12 @@
 <body>
   <aside class="sidebar">
     <div class="logo">Bienvenido Admin Valkin</div>
-    <a href="{{ url_for('admin_panel') }}">📊 Dashboard</a>
-    <a href="{{ url_for('admin_paquetes') }}">📦 Paquetes</a>
-    <a href="{{ url_for('admin_tutoriales') }}" class="active">🎓 Tutoriales</a>
-    <a href="{{ url_for('admin_tienda') }}">🛒 Tienda</a>
+    <a href="/administrador_panel">📊 Dashboard</a>
+    <a href="/administrador_paquetes">📦 Paquetes</a>
+    <a href="/administrador_tutoriales">🎓 Tutoriales</a>
+    <a href="/administrador_tienda">🛒 Tienda</a>
     <div class="logout-section">
-        <a href="{{ url_for('logout') }}" class="logout-btn flex items-center gap-2">
+        <a href="/logout_admin" class="logout-btn flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M9 6l-6 6 6 6" />
               <path d="M3 12h13" />

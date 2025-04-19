@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar sesion - Administrador</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/master.css') }}">
+    <title>Iniciar sesión - Administrador</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_master.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <div class="login">
-        <img src="" alt="">
         <h2>Administrador Valkin</h2>
         <h3>Acceder al panel de administrador</h3>
-        <form class="form" method="POST" action="/admin/login">
+
+        <form class="form" method="POST" action="/administrador">
             <div class="textbox">
-                <input required type="text" name="username" autocomplete="off">
+                <input required type="text" name="username" placeholder="Usuario" autocomplete="username">
                 <label>Usuario</label>
             </div>
             <div class="textbox">
-                <input required type="password" name="password" autocomplete="off">
+                <input required type="password" name="password" placeholder="Contraseña" autocomplete="current-password">
                 <label>Contraseña</label>
             </div>
             <button type="submit">
@@ -28,6 +28,7 @@
             </button>
         </form>        
     </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     {% if error == 'invalid' %}
