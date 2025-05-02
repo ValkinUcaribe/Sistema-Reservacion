@@ -23,21 +23,64 @@ from functools import wraps
 
 load_dotenv()
 
+from functools import wraps
+from flask import session, redirect
+
 def user_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        global id_usuario_global, nombre_usuario, usuario_normal, usuario_google
+
+        # Validación de sesión
         if 'user_id' not in session or session.get('tipo_usuario') not in ['normal', 'google']:
             return redirect('/')
+
+        # Asignación de variables globales
+        id_usuario_global = session.get('user_id')
+        nombre_usuario = session.get('user_nombre')
+        tipo_usuario = session.get('tipo_usuario')
+
+        usuario_normal = tipo_usuario == 'normal'
+        usuario_google = tipo_usuario == 'google'
+
+        # Impresión de todo para debug
+        print(f"[DEBUG - @user_required]")
+        print(f"id_usuario_global: {id_usuario_global}")
+        print(f"nombre_usuario: {nombre_usuario}")
+        print(f"usuario_normal: {usuario_normal}")
+        print(f"usuario_google: {usuario_google}")
+        print(f"session completa: {dict(session)}")
+
         return f(*args, **kwargs)
     return decorated_function
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or session.get('tipo_usuario') != 'admin':
+        if 'user_id' not in session or session.get('tipo_usuario_admin') != 'admin':
             return redirect('/administrador')
         return f(*args, **kwargs)
     return decorated_function
+
+def cargar_datos_usuario():
+    global id_usuario_global, nombre_usuario, usuario_normal, usuario_google
+
+    id_usuario_global = None
+    nombre_usuario = None
+    usuario_normal = False
+    usuario_google = False
+
+    tipo_usuario = session.get('tipo_usuario')
+    user_id = session.get('user_id')
+    user_nombre = session.get('user_nombre')
+
+    if tipo_usuario and user_id and user_nombre:
+        id_usuario_global = user_id
+        nombre_usuario = user_nombre
+        if tipo_usuario == 'normal':
+            usuario_normal = True
+        elif tipo_usuario == 'google':
+            usuario_google = True
 
 # Función para generar un PIN aleatorio de 6 dígitos
 def generar_pin():
@@ -82,7 +125,47 @@ def cargar_y_modificar_html(ruta_html, pin):
         print(f"❌ Error al procesar el HTML: {e}")
         return None
     
+#correo de envio de token
+def cargar_y_modificar_html_2(ruta_html, token, horario):
+    """
+    Carga un archivo HTML y reemplaza algunas variables dinámicas.
 
+    :param ruta_html: Ruta del archivo HTML a cargar.
+    :param token: Token de acceso generado.
+    :param horario: Horario de la reserva.
+    :return: HTML modificado con los datos dinámicos.
+    """
+    try:
+        # Leer el contenido del archivo HTML
+        with open(ruta_html, "r", encoding="utf-8") as archivo:
+            contenido_html = archivo.read()
+
+        # Diccionario de reemplazos en el HTML
+        reemplazos = {
+            "[Nombre]": "Usuario",
+            "[Token]": token,
+            "[Horario]": horario,
+            "[Correo de soporte]": "soporte@valkin.com",
+            "[Teléfono de contacto]": "+52 123 456 7890",
+            "[URL_POLÍTICAS]": "https://valkin.com/politicas",
+            "[URL_SOPORTE]": "https://valkin.com/soporte",
+        }
+
+        # Aplicar los reemplazos en el contenido del HTML
+        for clave, valor in reemplazos.items():
+            contenido_html = contenido_html.replace(clave, valor)
+
+        return contenido_html
+
+    except FileNotFoundError:
+        print(f"❌ Error: No se encontró el archivo HTML en {ruta_html}.")
+        return None
+
+    except Exception as e:
+        print(f"❌ Error al procesar el HTML: {e}")
+        return None
+
+#envio de bienvenida
 def cargar_y_modificar_html_3(ruta_html, token, horario):
     """
     Carga un archivo HTML y reemplaza algunas variables dinámicas.
@@ -267,13 +350,14 @@ def login():
                     session['user_nombre'] = user['nombre']  # Guarda el nombre del usuario en la sesión
                     id_usuario_global = user['id_usuario']
                     nombre_usuario = user['nombre']
+                    session['tipo_usuario'] = 'normal'
                     
-
                     usuario_normal = True
                     usuario_google = False
                     print(nombre_usuario)
                     print(usuario_normal)
                     print(usuario_google)
+                    print(session)
 
                     # Redirige al usuario a la ruta 'home' después de un login exitoso
                     return redirect(url_for('home'))
@@ -551,12 +635,15 @@ def olvido():
 # Función para entrar al home de la página
 # ver la forma de tomar las reservaciones y cambiar lo de microsft tanto nombre como imagen
 @app.route('/home', methods=['GET', 'POST'])
+@user_required
 def home():
-    global nombre_usuario, usuario_google, usuario_normal, id_usuario_global
+
+    print(nombre_usuario, id_usuario_global, usuario_normal, usuario_google)
 
     # 🔒 Verificación de autenticación
     if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
+    print(session)
 
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
@@ -620,9 +707,8 @@ def home():
 
 # Funcion de los productos de la tienda
 @app.route('/tienda', methods=['POST', 'GET'])
+@user_required
 def tienda():
-    global usuario_google, usuario_normal
-
     # 🔒 Verificación de autenticación
     if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
@@ -642,9 +728,8 @@ def tienda():
     return render_template('tienda.html', productos=productos)
 
 @app.route('/paquetes')
+@user_required
 def paquetes():
-    global usuario_google, usuario_normal, id_usuario_global
-
     if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
 
@@ -682,8 +767,8 @@ def paquetes():
 # Cambiar para que distinga entre usuario normal y google y verifique disponibilidad de fecha y hora
 # Cambiar para que acepte el forma de fecha y hora del frontend
 @app.route('/reservacion', methods=['GET', 'POST']) 
+@user_required
 def reservacion():
-    global usuario_normal, usuario_google, id_usuario_global
 
     if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
@@ -855,8 +940,8 @@ def reservacion():
     return render_template("reservacion.html")
 
 @app.route("/confirmar_reservacion", methods=["POST"])
+@user_required
 def confirmar_reservacion():
-    global usuario_normal, usuario_google, id_usuario_global
     data = request.json
     print(data)
     duracion = data.get("duracion")
@@ -1032,8 +1117,8 @@ def eliminar_reserva(id_reserva):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 @app.route('/horas_disponibles', methods=['GET'])
+@user_required
 def horas_disponibles():
-    global usuario_normal, usuario_google, id_usuario_global
     print(id_usuario_global)
 
     if not (usuario_normal or usuario_google):
@@ -1123,9 +1208,8 @@ def horas_disponibles():
 
 
 @app.route("/reservas_cercanas", methods=["GET"])
+@user_required
 def obtener_reservas_cercanas():
-    global id_usuario_global, usuario_normal, usuario_google  # Variables globales dentro de la función
-
     connection = get_db_connection()  
     if connection is None:
         return jsonify({"success": False, "error": "No se pudo conectar a la base de datos"}), 500
@@ -1203,9 +1287,8 @@ def obtener_reservas_cercanas():
 #Se pondra en la bd con ID, ID_usuario o ID_usuario_google, ID_reservacion, y el token hasheado
 #falta implementacion y verificar una cosas
 @app.route('/reservas_page')
+@user_required
 def reservas_page():
-    global id_usuario_global, usuario_normal, usuario_google
-
     # 🔒 Verificación de autenticación
     if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
@@ -1250,30 +1333,24 @@ def reservas_page():
 
 # Función para generar el hash del token
 def hash_token(token):
-    # Usamos SHA-256 para hashear el token
     sha256_hash = hashlib.sha256()
     sha256_hash.update(token.encode('utf-8'))
     return sha256_hash.hexdigest()
 
-@app.route('/token', methods=['POST'])
-def generar_token():
-    global id_usuario_global, usuario_normal, usuario_google
+@app.route('/crear_token_reserva', methods=['POST'])
+@user_required
+def crear_token_reserva():
 
-    # 🔒 Verificar si el usuario está autenticado, de lo contrario redirigir a login
     if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
 
-    if not id_usuario_global:
-        return jsonify({"success": False, "error": "Usuario no identificado"}), 400
-
-    # Obtener datos del JSON enviado desde el frontend
     data = request.get_json()
     id_reserva = data.get("id_reserva")
 
     if not id_reserva:
         return jsonify({"success": False, "error": "ID de reserva no proporcionado"}), 400
 
-    # 📌 Determinar el filtro y el tipo de usuario
+    # Establecer filtro de usuario
     if usuario_normal:
         filtro_usuario = "id_usuario = %s"
         usuario_id = id_usuario_global
@@ -1283,7 +1360,6 @@ def generar_token():
     else:
         return jsonify({"success": False, "error": "Tipo de usuario no identificado"}), 400
 
-    # Conectar a la base de datos
     conn = get_db_connection()
     if conn is None:
         return jsonify({"success": False, "error": "No se pudo conectar a la base de datos"}), 500
@@ -1291,73 +1367,139 @@ def generar_token():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # Verificar que la reserva exista, sea del usuario, y esté activa
-        query = f"""
-        SELECT id_reserva, fecha_reserva, duracion
-        FROM Reservas
-        WHERE {filtro_usuario} AND id_reserva = %s AND estado_reserva = 'Activo'
-        """
-        cursor.execute(query, (usuario_id, id_reserva))
-        resultados = cursor.fetchall()
-
-        if not resultados:
-            return jsonify({'error': 'Reserva no encontrada o no activa'}), 404
-
-        reserva = resultados[0]
-        fecha_reserva = reserva['fecha_reserva']
-        fecha_str = fecha_reserva.strftime('%Y-%m-%d')
-        hora_str = fecha_reserva.strftime('%H:%M:%S')
-        duracion = reserva['duracion']
-
-        # 🔐 Generar y hashear el token
-        token = f"T-{reserva['id_reserva']}-{id_usuario_global}-{fecha_str}-{hora_str}-{duracion}"
-        hashed_token = hash_token(token)
-
-        # Verificar si ya existe un token para esta reserva
-        check_token_query = f"""
-        SELECT token FROM Tokens WHERE id_reserva = %s AND {filtro_usuario}
-        """
-        cursor.execute(check_token_query, (id_reserva, usuario_id))
+        # Verificar si ya hay un token
+        cursor.execute(f"""
+            SELECT token FROM Tokens WHERE id_reserva = %s AND {filtro_usuario}
+        """, (id_reserva, usuario_id))
         existing_token = cursor.fetchone()
 
         if existing_token:
-            return jsonify({'hashed_token': existing_token['token']})
+            return jsonify({'success': True, 'token': existing_token['token'], 'mensaje': 'Token ya existente'}), 200
 
-        # Obtener ubicación y fecha de creación del token
+        # Verificar que la reserva esté activa
+        cursor.execute(f"""
+            SELECT * FROM Reservas
+            WHERE {filtro_usuario} AND id_reserva = %s AND estado_reserva = 'Activo'
+        """, (usuario_id, id_reserva))
+        reserva = cursor.fetchone()
+
+        if not reserva:
+            return jsonify({'error': 'Reserva no encontrada o no activa'}), 404
+
+        # Generar token
+        fecha_str = reserva['fecha_reserva'].strftime('%Y-%m-%d')
+        token = f"T-{reserva['id_reserva']}-{usuario_id}-{fecha_str}-{reserva['duracion']}-{reserva['id_paquete']}-{reserva['Maquina']}"
+        hashed_token = hash_token(token)
+
+        # Obtener correo del usuario
+        if usuario_normal:
+            cursor.execute("SELECT correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
+        else:
+            cursor.execute("SELECT correo FROM UsuariosGoogle WHERE id_usuario_google = %s", (usuario_id,))
+        correo_usuario = cursor.fetchone().get('correo')
+
+        # Enviar token por correo
+        horario = reserva['fecha_reserva'].strftime('%Y-%m-%d %H:%M:%S') + f" por {reserva['duracion']} horas"
+        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", hashed_token, horario)
+        enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "🔐 Token de acceso para tu simulador", html_final)
+
+        # Insertar token en la base de datos
         info_local = obtener_ubicacion_y_hora()
-        ubicacion = info_local["ubicacion_completa"]
-        fecha_creacion = f"{info_local['fecha_local']} {info_local['hora_local']}"
-
-        # Insertar nuevo token
         insert_query = """
         INSERT INTO Tokens (id_usuario, id_usuario_google, id_reserva, token, fecha_creacion, ubicacion)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         cursor.execute(insert_query, (
-            id_usuario_global if usuario_normal else None,
-            id_usuario_global if usuario_google else None,
+            usuario_id if usuario_normal else None,
+            usuario_id if usuario_google else None,
             id_reserva,
             hashed_token,
-            fecha_creacion,
-            ubicacion
+            f"{info_local['fecha_local']} {info_local['hora_local']}",
+            info_local["ubicacion_completa"]
         ))
         conn.commit()
 
-        return jsonify({'hashed_token': hashed_token})
+        return jsonify({'success': True, 'token': hashed_token}), 200
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
     finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        cursor.close()
+        conn.close()
+
+@app.route('/reenviar_token_reserva', methods=['POST'])
+@user_required
+def reenviar_token_reserva():
+    if not (usuario_normal or usuario_google):
+        return redirect(url_for('login'))
+
+    data = request.get_json()
+    id_reserva = data.get("id_reserva")
+
+    if not id_reserva:
+        return jsonify({"success": False, "error": "ID de reserva no proporcionado"}), 400
+
+    # Establecer filtro de usuario
+    if usuario_normal:
+        filtro_usuario = "id_usuario = %s"
+        usuario_id = id_usuario_global
+    elif usuario_google:
+        filtro_usuario = "id_usuario_google = %s"
+        usuario_id = id_usuario_global
+    else:
+        return jsonify({"success": False, "error": "Tipo de usuario no identificado"}), 400
+
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"success": False, "error": "No se pudo conectar a la base de datos"}), 500
+
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Obtener token existente
+        cursor.execute(f"""
+            SELECT token FROM Tokens WHERE id_reserva = %s AND {filtro_usuario}
+        """, (id_reserva, usuario_id))
+        token_data = cursor.fetchone()
+
+        if not token_data:
+            return jsonify({"error": "Token no encontrado para esta reserva"}), 404
+
+        # Obtener datos de la reserva
+        cursor.execute(f"""
+            SELECT fecha_reserva, duracion FROM Reservas
+            WHERE id_reserva = %s AND {filtro_usuario}
+        """, (id_reserva, usuario_id))
+        reserva = cursor.fetchone()
+
+        if not reserva:
+            return jsonify({"error": "Reserva no encontrada"}), 404
+
+        # Obtener correo
+        if usuario_normal:
+            cursor.execute("SELECT correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
+        else:
+            cursor.execute("SELECT correo FROM UsuariosGoogle WHERE id_usuario_google = %s", (usuario_id,))
+        correo_usuario = cursor.fetchone().get('correo')
+
+        # Enviar correo
+        horario = reserva['fecha_reserva'].strftime('%Y-%m-%d %H:%M:%S') + f" por {reserva['duracion']} horas"
+        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", token_data['token'], horario)
+        enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "📩 Reenvío del token de acceso", html_final)
+        token = token_data['token']
+
+        return jsonify({'success': True, 'mensaje': 'Token reenviado correctamente', 'token': token}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Funcion para modificar perfil
 @app.route('/perfil', methods=['GET', 'POST'])
+@user_required
 def perfil():
-    global id_usuario_global, usuario_normal, usuario_google
-
     if not (usuario_normal or usuario_google) or not id_usuario_global:
         return redirect(url_for('login'))
 
@@ -1605,9 +1747,9 @@ def stripe_pay():
 
 # Ruta para confirmar el pago y asociarlo a la reserva
 @app.route('/thanks')
+@user_required
 def thanks():
     # Variables globales de control
-    global usuario_google, usuario_normal, id_usuario_global
     session_id = request.args.get('session_id')
 
     cursor = None
@@ -1745,13 +1887,14 @@ def callback():
         if user_info:
             insertar_usuario_en_db(user_info)  # Insertar usuario en la BD si no existe
 
+            #Cambiar
             session['user'] = {
                 "id": user_info.get("sub"),
                 "nombre": user_info.get("name", "Usuario de Google"),
                 "email": user_info.get("email"),
                 "avatar": user_info.get("picture", "static/image/default-avatar.png")
             }
-
+            #Eliminar
             # Redirigir según el tipo de solicitud
             if request.headers.get('Accept') == 'application/json':
                 print(usuario_normal)
@@ -1853,7 +1996,7 @@ def administrador_login():
                 if admin and admin['contrasena'] and check_password_hash(admin['contrasena'], password):
                     session['admin_id'] = admin['id_administrador']
                     session['admin_nombre'] = admin['nombre']
-                    session['tipo_usuario'] = 'admin'
+                    session['tipo_usuario_admin'] = 'admin'
                     return redirect(url_for('administrador_panel'))
                 else:
                     error = 'invalid'
@@ -2134,9 +2277,8 @@ def logout_admin():
     return redirect(url_for('administrador_login'))
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/tutoriales', methods=['GET', 'POST'])
+@user_required
 def tutoriales():
-    global id_usuario_global, usuario_normal, usuario_google
-
     # Redirigir a login si el usuario no está autenticado
     if not (usuario_normal or usuario_google) or not id_usuario_global:
         return redirect(url_for('login'))

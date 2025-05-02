@@ -297,7 +297,6 @@
             let horaSeleccionada = document.getElementById("hora-seleccionada").textContent.trim();
             let duracionSeleccionada = document.getElementById("duracion-reserva").value.trim();
 
-            // Verificar que la fecha y hora estén seleccionadas
             if (fechaSeleccionada === "No seleccionada" || horaSeleccionada === "No seleccionada") {
                 Swal.fire({
                     icon: 'warning',
@@ -307,14 +306,12 @@
                 return;
             }
 
-            // Almacenar los datos de la reserva
             const datosReserva = {
                 fecha: fechaSeleccionada,
                 hora: horaSeleccionada,
                 duracion: duracionSeleccionada
             };
 
-            // Mostrar el modal de confirmación con los detalles de la reserva
             Swal.fire({
                 title: 'Confirmar Reservación',
                 html: `
@@ -329,60 +326,58 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Lógica para confirmar la reserva
                     if (typeof DataConfirmar !== 'undefined' && DataConfirmar.success) {
-                        const confirmacionData = {
-                            id_reserva: DataConfirmar.id_reserva,
-                            duracion: DataConfirmar.duracion
-                        };
-
-                        // Enviar la confirmación al servidor
                         fetch("/confirmar_reservacion", {
                             method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(confirmacionData)
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                id_reserva: DataConfirmar.id_reserva,
+                                duracion: DataConfirmar.duracion
+                            })
                         })
-                        .then(response => response.json())
+                        .then(res => res.json())
                         .then(data => {
                             if (data.success) {
-                                alert("Reserva confirmada con éxito.");
-                                location.reload();
+                                // Generar el token tras confirmar
+                                fetch("/crear_token_reserva", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        id_reserva: DataConfirmar.id_reserva,
+                                        duracion: DataConfirmar.duracion
+                                    })
+                                })
+                                .then(res => res.json())
+                                .then(tokenData => {
+                                    if (tokenData.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Reserva confirmada',
+                                            html: `
+                                                <p>Tu reserva ha sido confirmada con éxito.</p>
+                                                <p><strong>Token de acceso:</strong> <code>${tokenData.token}</code></p>
+                                            `
+                                        }).then(() => location.reload());
+                                    } else {
+                                        alert(`Error al generar token: ${tokenData.error}`);
+                                    }
+                                });
                             } else {
                                 alert(`Error: ${data.error}`);
                             }
-                        })
-                        .catch(error => {
-                            console.error("Error al confirmar la reserva:", error);
-                            alert("Ocurrió un error al confirmar la reserva. Intenta nuevamente.");
                         });
                     } else {
                         alert("No se ha realizado una reserva válida.");
                     }
                 } else if (result.isDismissed) {
-                    // Si el usuario cancela la reserva, eliminarla
                     if (typeof DataConfirmar !== 'undefined' && DataConfirmar.id_reserva) {
-                        const id_reserva = DataConfirmar.id_reserva;
-
-                        // Llamar a la ruta para eliminar la reserva pendiente
-                        fetch(`/eliminar_reserva/${id_reserva}`, {
+                        fetch(`/eliminar_reserva/${DataConfirmar.id_reserva}`, {
                             method: "DELETE"
                         })
-                        .then(response => response.json())
+                        .then(res => res.json())
                         .then(data => {
-                            if (data.message) {
-                                alert("Reserva eliminada con éxito.");
-                            } else {
-                                alert(`Error: ${data.error}`);
-                            }
-                        })
-                        .catch(error => {
-                            console.error("Error al eliminar la reserva:", error);
-                            alert("Ocurrió un error al eliminar la reserva. Intenta nuevamente.");
+                            alert(data.message || `Error: ${data.error}`);
                         });
-                    } else {
-                        alert("No se ha encontrado una reserva para eliminar.");
                     }
                 }
             });
@@ -467,55 +462,6 @@
                     }
                 }
             })
-
-                /*.then(data => {
-                    if (data.success) {
-                        const horasDisponibles = data.horas_restantes;
-
-                        if (horasDisponibles > 0) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Horas disponibles',
-                                text: `Tienes ${horasDisponibles} hora(s).`,
-                                confirmButtonText: 'Continuar',
-                                confirmButtonColor: '#3e5064'
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Sin horas disponibles',
-                                text: 'No tienes horas disponibles. Por favor compra un paquete.',
-                                confirmButtonText: 'Ver paquetes' + "\nPuedes comprar un paquete aquí.",
-                                text: data.error + " \nPuedes comprar un paquete aquí.",
-                                showCancelButton: true,
-                                cancelButtonText: 'Cerrar',
-                                footer: '<a href="/paquetes">Ver paquetes disponibles</a>'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "/paquetes"; 
-                                }
-                            });
-                        }
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: `Error: ${data.error}`,
-                            confirmButtonText: 'Cerrar',
-                            confirmButtonColor: '#d33'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error("Error al obtener horas:", error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de conexión',
-                        text: 'Hubo un problema al verificar las horas disponibles. Inténtalo de nuevo más tarde.',
-                        confirmButtonText: 'Cerrar',
-                        confirmButtonColor: '#d33'
-                    });
-                });*/
         }
 
         /*AQUÍ FINALIZA EL CÓDIGO*/
