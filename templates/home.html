@@ -57,7 +57,7 @@
                 <div class="user-details">
                     <h2 id="nombre_usuario">{{ session['user_nombre'] if session['user_id'] else 'Usuario' }}</h2>
                     <img src="static/image/PILOTO%20PROF.png" alt="Insignia" height="35">
-                    <p>Piloto Estudiante</p>
+                    <p><strong>Tipo de Perfil:</strong> <span id="tipo_perfil">{{ tipo_perfil }}</span></p>
                     <p><strong>Horas Activas:</strong> <span id="horas_activas">{{ horas_activas }}</span> HRS</p>
                 </div>
                 <div class="user-stats">

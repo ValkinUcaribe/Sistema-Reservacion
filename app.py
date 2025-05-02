@@ -87,7 +87,7 @@ def generar_pin():
     return ''.join(random.choices(string.digits, k=6))
 
 # envio de pin con imagen lista falta el de bienvenida y el de envio de token
-def cargar_y_modificar_html(ruta_html, pin):
+def cargar_y_modificar_html(ruta_html, pin, nombre):
     """
     Carga un archivo HTML y reemplaza las variables dinámicas con enlaces de imágenes en Google Drive.
 
@@ -102,7 +102,7 @@ def cargar_y_modificar_html(ruta_html, pin):
 
         # Diccionario de reemplazos en el HTML
         reemplazos = {
-            "[Nombre]": "Usuario",
+            "[Nombre]": nombre,
             "[Código]": pin,
             "[Tiempo de validez]": "10",
             "[Correo de soporte]": "soporte@valkin.com",
@@ -126,7 +126,7 @@ def cargar_y_modificar_html(ruta_html, pin):
         return None
     
 #correo de envio de token
-def cargar_y_modificar_html_2(ruta_html, token, horario):
+def cargar_y_modificar_html_2(ruta_html, token, horario, nombre):
     """
     Carga un archivo HTML y reemplaza algunas variables dinámicas.
 
@@ -142,7 +142,7 @@ def cargar_y_modificar_html_2(ruta_html, token, horario):
 
         # Diccionario de reemplazos en el HTML
         reemplazos = {
-            "[Nombre]": "Usuario",
+            "[Nombre]": nombre,
             "[Token]": token,
             "[Horario]": horario,
             "[Correo de soporte]": "soporte@valkin.com",
@@ -166,7 +166,7 @@ def cargar_y_modificar_html_2(ruta_html, token, horario):
         return None
 
 #envio de bienvenida
-def cargar_y_modificar_html_3(ruta_html, token, horario):
+def cargar_y_modificar_html_3(ruta_html,nombre):
     """
     Carga un archivo HTML y reemplaza algunas variables dinámicas.
 
@@ -182,13 +182,8 @@ def cargar_y_modificar_html_3(ruta_html, token, horario):
 
         # Diccionario de reemplazos en el HTML
         reemplazos = {
-            "[Nombre]": "Usuario",
-            "[Token]": token,
-            "[Horario]": horario,
-            "[Correo de soporte]": "soporte@valkin.com",
-            "[Teléfono de contacto]": "+52 123 456 7890",
-            "[URL_POLÍTICAS]": "https://valkin.com/politicas",
-            "[URL_SOPORTE]": "https://valkin.com/soporte",
+            "[Nombre]": nombre,
+            "[URL_DE_TU_SITIO]": "simuladordevuelo.online",
         }
 
         # Aplicar los reemplazos en el contenido del HTML
@@ -457,17 +452,34 @@ def privacidad():
 
 @app.route('/envio_pin', methods=['POST'])
 def envio_pin():
-    global pin, pin_timestamp, correo_usuario  # Asegurar que usa las variables globales
+    global pin, pin_timestamp, correo_usuario
 
     if not correo_usuario:
         return jsonify({"error": "Correo no proporcionado"}), 400
 
-    pin = generar_pin()  # Generar el PIN
-    pin_timestamp = time.time()  # Guardar el tiempo de generación del PIN
+    pin = generar_pin()
+    pin_timestamp = time.time()
 
-    # Cargar y modificar el HTML con el PIN
+    # Obtener nombre desde la base de datos
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        cursor = connection.cursor()
+        query = "SELECT nombre FROM Usuarios WHERE correo = %s"
+        cursor.execute(query, (correo_usuario,))
+        resultado = cursor.fetchone()
+        nombre = resultado[0] if resultado else "Usuario"
+    except mysql.connector.Error as err:
+        print(f"❌ Error al obtener el nombre del usuario: {err}")
+        nombre = "Usuario"
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+    # Cargar y modificar HTML con nombre y PIN
     ruta_html = os.path.join(RUTA_CARPETA, ARCHIVO_HTML)
-    html_modificado = cargar_y_modificar_html(ruta_html, pin)
+    html_modificado = cargar_y_modificar_html(ruta_html, pin, nombre)
 
     if html_modificado:
         enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "Código de Verificación", html_modificado)
@@ -476,25 +488,43 @@ def envio_pin():
         return jsonify({"error": "No se pudo cargar la plantilla HTML"}), 500
 
 # Funcion de reenvio de PIN por si no le llego, pero es mas para cuando puso mal el correo
-@app.route('/reenvio/<destino>', methods=['GET','POST'])
+@app.route('/reenvio/<destino>', methods=['GET', 'POST'])
 def reenvio(destino):
-    global pin, pin_timestamp, correo_usuario  # Asegurar que usa las variables globales
+    global pin, pin_timestamp, correo_usuario
 
     if not correo_usuario:
         return jsonify({"error": "Correo no proporcionado"}), 400
 
-    pin = generar_pin()  # Generar el PIN
-    pin_timestamp = time.time()  # Guardar el tiempo de generación del PIN
+    pin = generar_pin()
+    pin_timestamp = time.time()
 
-    # Cargar y modificar el HTML con el PIN
+    # Obtener nombre desde la base de datos
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        cursor = connection.cursor()
+        query = "SELECT nombre FROM Usuarios WHERE correo = %s"
+        cursor.execute(query, (correo_usuario,))
+        resultado = cursor.fetchone()
+        nombre = resultado[0] if resultado else "Usuario"
+    except mysql.connector.Error as err:
+        print(f"❌ Error al obtener el nombre del usuario: {err}")
+        nombre = "Usuario"
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+    # Cargar y modificar HTML con nombre y PIN
     ruta_html = os.path.join(RUTA_CARPETA, ARCHIVO_HTML)
-    html_modificado = cargar_y_modificar_html(ruta_html, pin)
+    html_modificado = cargar_y_modificar_html(ruta_html, pin, nombre)
 
     if html_modificado:
         enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "Código de Verificación", html_modificado)
         return redirect(url_for('validacion', correo=correo_usuario))
     else:
         return jsonify({"error": "No se pudo cargar la plantilla HTML"}), 500
+
 
 # Funcion para la validacion del PIN
 @app.route('/validacion', methods=['GET', 'POST'])
@@ -566,7 +596,7 @@ def contrasena():
             query_check = "SELECT id_usuario FROM Usuarios WHERE correo = %s"
             cursor.execute(query_check, (correo_usuario,))
             resultado = cursor.fetchone()
-            cursor.fetchall()  # <- AÑADIDO para evitar el error 'Unread result found'
+            cursor.fetchall()
 
             if resultado:
                 # Usuario ya existe → actualizar contraseña
@@ -592,6 +622,19 @@ def contrasena():
                 cursor.execute(query_insert, valores)
                 connection.commit()
                 print("Usuario registrado con nueva contraseña")
+
+                # ✅ Enviar correo de bienvenida
+                ruta_html = "templates/Welcome.html"
+                html_modificado = cargar_y_modificar_html_3(ruta_html, nombre_usuario)
+
+                if html_modificado:
+                    destino = correo_usuario
+                    asunto = "¡Bienvenido a Valkin Simulator!"
+
+                    enviar_correo(REMITENTE, CONTRASEÑA, destino, asunto, html_modificado)
+                else:
+                    print("❌ No se pudo cargar el HTML para el correo de bienvenida.")
+
                 return redirect('/', code=302)
 
         except mysql.connector.Error as err:
@@ -611,6 +654,7 @@ def contrasena():
     # Si es GET, renderiza el formulario
     print("Método GET, mostrando formulario con correo")
     return render_template('Password.html', correo=correo_usuario)
+
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Funcion para el olvido de contraseña y se quiere restablecer
 @app.route("/olvido", methods=['GET', 'POST'])
@@ -637,9 +681,6 @@ def olvido():
 @app.route('/home', methods=['GET', 'POST'])
 @user_required
 def home():
-
-    print(nombre_usuario, id_usuario_global, usuario_normal, usuario_google)
-
     # 🔒 Verificación de autenticación
     if not (usuario_google or usuario_normal):
         return redirect(url_for('login'))
@@ -662,6 +703,15 @@ def home():
         elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
             valor_usuario = id_usuario_global
+
+        # 🔹 Consultar el tipo de perfil del usuario
+        cursor.execute(f"""
+            SELECT tipo_perfil 
+            FROM Usuarios_Google 
+            WHERE {filtro_usuario}
+        """, (valor_usuario,))
+        tipo_perfil = cursor.fetchone()
+        tipo_perfil = tipo_perfil["tipo_perfil"] if tipo_perfil else "desconocido"
 
         # 🔹 Actualizar reservas vencidas a 'caducado' si la fecha_reserva es menor a la fecha actual
         cursor.execute(f"""
@@ -693,17 +743,19 @@ def home():
         print(nombre_usuario)
         print(horas_activas)
         print(promedio_horas)
+        print(tipo_perfil)
 
     except mysql.connector.Error as e:
         print(f"Error en la base de datos: {e}")
         horas_activas, promedio_horas = 0, 0
+        tipo_perfil = "desconocido"
 
     finally:
         cursor.close()
         connection.close()
 
-    # Renderizar la página
-    return render_template('home.html', user=nombre_usuario, horas_activas=horas_activas, promedio_horas=promedio_horas)
+    # Renderizar la página con el tipo_perfil
+    return render_template('home.html', user=nombre_usuario, horas_activas=horas_activas, promedio_horas=promedio_horas, tipo_perfil=tipo_perfil)
 
 # Funcion de los productos de la tienda
 @app.route('/tienda', methods=['POST', 'GET'])
@@ -1340,7 +1392,6 @@ def hash_token(token):
 @app.route('/crear_token_reserva', methods=['POST'])
 @user_required
 def crear_token_reserva():
-
     if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))
 
@@ -1391,16 +1442,19 @@ def crear_token_reserva():
         token = f"T-{reserva['id_reserva']}-{usuario_id}-{fecha_str}-{reserva['duracion']}-{reserva['id_paquete']}-{reserva['Maquina']}"
         hashed_token = hash_token(token)
 
-        # Obtener correo del usuario
+        # Obtener nombre y correo del usuario
         if usuario_normal:
-            cursor.execute("SELECT correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
+            cursor.execute("SELECT nombre, correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
         else:
-            cursor.execute("SELECT correo FROM UsuariosGoogle WHERE id_usuario_google = %s", (usuario_id,))
-        correo_usuario = cursor.fetchone().get('correo')
+            cursor.execute("SELECT nombre, correo FROM Usuarios_Google WHERE id_usuario_google = %s", (usuario_id,))
+        usuario_data = cursor.fetchone()
+
+        nombre_usuario = usuario_data.get('nombre')
+        correo_usuario = usuario_data.get('correo')
 
         # Enviar token por correo
         horario = reserva['fecha_reserva'].strftime('%Y-%m-%d %H:%M:%S') + f" por {reserva['duracion']} horas"
-        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", hashed_token, horario)
+        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", hashed_token, horario, nombre_usuario)
         enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "🔐 Token de acceso para tu simulador", html_final)
 
         # Insertar token en la base de datos
@@ -1475,16 +1529,19 @@ def reenviar_token_reserva():
         if not reserva:
             return jsonify({"error": "Reserva no encontrada"}), 404
 
-        # Obtener correo
+        # Obtener nombre y correo del usuario
         if usuario_normal:
-            cursor.execute("SELECT correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
+            cursor.execute("SELECT nombre, correo FROM Usuarios WHERE id_usuario = %s", (usuario_id,))
         else:
-            cursor.execute("SELECT correo FROM UsuariosGoogle WHERE id_usuario_google = %s", (usuario_id,))
-        correo_usuario = cursor.fetchone().get('correo')
+            cursor.execute("SELECT nombre, correo FROM Usuarios_Google WHERE id_usuario_google = %s", (usuario_id,))
+        usuario_data = cursor.fetchone()
+
+        nombre_usuario = usuario_data.get('nombre')
+        correo_usuario = usuario_data.get('correo')
 
         # Enviar correo
         horario = reserva['fecha_reserva'].strftime('%Y-%m-%d %H:%M:%S') + f" por {reserva['duracion']} horas"
-        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", token_data['token'], horario)
+        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", token_data['token'], horario, nombre_usuario)
         enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "📩 Reenvío del token de acceso", html_final)
         token = token_data['token']
 
@@ -1844,30 +1901,24 @@ def thanks():
         if connection:
             connection.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Funcion para autenticacion de google
 @app.route("/verificacion_google", methods=['POST', 'GET'])
 def verificacion_google():
-    global state_global, usuario_google, usuario_normal
+    global state_global
     flow = Flow.from_client_secrets_file(
         'client_secrets.json',
-        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],  # Scope actualizado
+        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
         redirect_uri='https://localhost:5000/callback'
     )
-    # Generamos la URL de autorización y el estado
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true'
     )
-    # Guardamos el estado en la variable global
     state_global = state
-    usuario_google = True
-    usuario_normal = False
     return redirect(authorization_url)
 
-# Ruta de callback, donde Google redirige después de la autenticación
+
 @app.route('/callback')
 def callback():
-    global nombre_usuario
     try:
         global state_global
         if not state_global:
@@ -1882,98 +1933,87 @@ def callback():
 
         flow.fetch_token(authorization_response=request.url)
         credentials = flow.credentials
-        user_info = obtener_informacion_usuario(credentials)  # Obtenemos los datos de Google
+        user_info = obtener_informacion_usuario(credentials)
 
         if user_info:
-            insertar_usuario_en_db(user_info)  # Insertar usuario en la BD si no existe
-
-            #Cambiar
-            session['user'] = {
-                "id": user_info.get("sub"),
-                "nombre": user_info.get("name", "Usuario de Google"),
-                "email": user_info.get("email"),
-                "avatar": user_info.get("picture", "static/image/default-avatar.png")
-            }
-            #Eliminar
-            # Redirigir según el tipo de solicitud
-            if request.headers.get('Accept') == 'application/json':
-                print(usuario_normal)
-                print(usuario_google)
-                return jsonify({
-                    "status": "success",
-                    "message": "Bienvenido",
-                    "user": "usuario google"
-                })
+            user_data = insertar_usuario_en_db(user_info)  # retorna dict con id y nombre
+            if user_data:
+                session['user_id'] = user_data['id']
+                session['user_nombre'] = user_data['nombre']
+                session['tipo_usuario'] = 'google'
+                return redirect(url_for('home'))
             else:
-                return redirect(url_for('home'))  
+                return 'Error al insertar o recuperar el usuario de la BD.', 400
         else:
             return 'Error: No se pudo obtener la información del usuario.', 400
+
     except Exception as e:
         return f'Error en el callback: {str(e)}', 400
 
-# Función para obtener la información del usuario usando el token de acceso
+
 def obtener_informacion_usuario(credentials):
+    """
+    Usa el token de acceso para obtener los datos del usuario desde la API de Google.
+    """
     access_token = credentials.token
     url = "https://www.googleapis.com/oauth2/v3/userinfo"
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
+
     response = requests.get(url, headers=headers)
-    print(f"Respuesta de la API de Google: {response.status_code} - {response.json()}")  # Ver respuesta
     if response.status_code == 200:
-        print(response)
-        return response.json()  # Retorna la información del usuario (nombre, correo electrónico, etc.)
+        print(f"✅ Usuario autenticado: {response.json()}")
+        return response.json()
     else:
-        print(f"Error al obtener la información del usuario: {response.status_code}")
+        print(f"❌ Error al obtener el usuario de Google: {response.status_code}")
         return None
 
-# Función para insertar los datos del usuario en la base de datos si no existe
-def insertar_usuario_en_db(user_info):
-    global id_usuario_global  # Asegurar que usamos la variable global
 
+def insertar_usuario_en_db(user_info):
+    """
+    Inserta en la tabla Usuarios_Google si no existe y retorna un diccionario con ID y nombre del usuario.
+    """
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Obtener la fecha actual para el registro
         fecha_registro = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         hd = user_info.get('hd', 'No tiene hd')
+        correo = user_info['email']
+        imagen = user_info.get('picture', 'static/image/default-avatar.png')
+        verificado = user_info.get('email_verified', False)
+        nombre = user_info.get('name', 'Usuario de Google')
 
-        # Verificar si el usuario ya está registrado
-        cursor.execute("SELECT id_usuario_google FROM Usuarios_Google WHERE correo = %s", (user_info['email'],))
+        # Verifica si ya existe
+        cursor.execute("SELECT id_usuario_google, nombre FROM Usuarios_Google WHERE correo = %s", (correo,))
         existing_user = cursor.fetchone()
 
         if existing_user:
-            id_usuario_global = existing_user[0]  # Asignar ID si ya existe
-            print(f"El usuario ya existe con ID: {id_usuario_global}")
+            user_id, nombre_bd = existing_user
+            print(f"⚠️ Usuario ya existe con ID: {user_id}")
         else:
-            # Insertar el usuario si no existe
+            # Inserta nuevo
             query = """
-            INSERT INTO Usuarios_Google (imagen, correo, correo_verificado, fecha_registro, dominio)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO Usuarios_Google (nombre, imagen, correo, correo_verificado, fecha_registro, dominio)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """
-            data = (
-                user_info.get('picture', 'static/image/default-avatar.png'),
-                user_info['email'], 
-                user_info.get('email_verified', False),
-                fecha_registro,
-                hd
-            )
+            data = (nombre, imagen, correo, verificado, fecha_registro, hd)
             cursor.execute(query, data)
             conn.commit()
-            
-            # Obtener el ID generado por la BD
-            id_usuario_global = cursor.lastrowid
-            print(f"Usuario {user_info['email']} insertado en la BD con ID: {id_usuario_global}")
+            user_id = cursor.lastrowid
+            nombre_bd = nombre
+            print(f"✅ Usuario nuevo insertado con ID: {user_id}")
 
-        return id_usuario_global  # Retornar el ID del usuario
+        return {"id": user_id, "nombre": nombre_bd}
 
     except mysql.connector.Error as err:
-        print(f"⚠️ Error al interactuar con la BD: {err}")
+        print(f"⚠️ Error de BD: {err}")
         return None
     finally:
         cursor.close()
         conn.close()
+
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Rutas de administrador
 #@admin_required

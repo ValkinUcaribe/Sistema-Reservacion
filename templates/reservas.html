@@ -54,7 +54,7 @@
             <ul id="reservas-list">
                 {% for reserva in reservas %}
                     <li>
-                        <strong>Reserva ID:</strong> {{ reserva.id_reserva }} <br>
+                        <strong>Reservacion</strong><br>
                         <strong>Fecha:</strong> {{ reserva.fecha_reserva }} <br>
                         <strong>Duración:</strong> {{ reserva.duracion }} <br>
                         <button onclick="reenviarTokenReserva({{ reserva.id_reserva }})">Reenviar Token</button>
@@ -151,7 +151,6 @@
                     title: 'Nuevo token creado',
                     html: `
                         <p><strong>Token:</strong> ${data.token}</p>
-                        <p><strong>Expiración:</strong> ${data.expiracion}</p>
                     `,
                     icon: 'success'
                 });

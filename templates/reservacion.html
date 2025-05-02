@@ -77,6 +77,12 @@
         #overlay-wrapper {
             position: relative;
         }
+
+        #menu-toggle {
+            position: relative; /* o absolute, según tu layout */
+            z-index: 1000;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -445,10 +451,25 @@
                             } else if (result.isDismissed) {
                                 // Crear overlay solo sobre el contenido principal
                                 const contenido = document.getElementById("contenido-principal");
-                                const overlay = document.createElement("div");
-                                overlay.id = "bloqueo-interaccion";
-                                contenido.style.position = "relative";
-                                contenido.appendChild(overlay);
+                                if (!document.getElementById("bloqueo-interaccion")) {
+                                    const overlay = document.createElement("div")
+                                    overlay.id = "bloqueo-interaccion";
+                                    overlay.style.position = "absolute";
+                                    overlay.style.top = "0";
+                                    overlay.style.left = "0";
+                                    overlay.style.width = "100%";
+                                    overlay.style.height = "100%";
+                                    overlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+                                    overlay.style.zIndex = "999";
+                                    overlay.style.pointerEvents = "auto";
+                                    contenido.style.position = "relative";
+                                    contenido.appendChild(overlay);
+                                }
+
+                                const menuBtn = document.getElementById("menu-toggle")
+                                menuBtn.style.zIndex = "1000";
+                                menuBtn.style.position = "relative";
+                                menuBtn.style.pointerEvents = "auto";
                             }
                         });
                     } else {
