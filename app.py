@@ -1,5 +1,5 @@
 # Librerias a usar
-from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify, g
+from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import hashlib
 import mysql.connector
@@ -20,8 +20,16 @@ import io
 import base64
 from dotenv import load_dotenv
 from functools import wraps
+from cryptography.fernet import Fernet
 
 load_dotenv()
+clave = os.getenv("FERNET_KEY")
+print(clave)
+
+if clave is None:
+    raise ValueError("FERNET_KEY no está definida en el archivo .env")
+
+fernet = Fernet(clave)
 
 from functools import wraps
 from flask import session, redirect
@@ -1401,7 +1409,6 @@ def crear_token_reserva():
     if not id_reserva:
         return jsonify({"success": False, "error": "ID de reserva no proporcionado"}), 400
 
-    # Establecer filtro de usuario
     if usuario_normal:
         filtro_usuario = "id_usuario = %s"
         usuario_id = id_usuario_global
@@ -1437,10 +1444,10 @@ def crear_token_reserva():
         if not reserva:
             return jsonify({'error': 'Reserva no encontrada o no activa'}), 404
 
-        # Generar token
+        # Generar token sin hashear, usando Fernet
         fecha_str = reserva['fecha_reserva'].strftime('%Y-%m-%d')
-        token = f"T-{reserva['id_reserva']}-{usuario_id}-{fecha_str}-{reserva['duracion']}-{reserva['id_paquete']}-{reserva['Maquina']}"
-        hashed_token = hash_token(token)
+        token_plano = f"Tipo:T-Reserva:{reserva['id_reserva']}-Usuario:{usuario_id}-Fecha:{fecha_str}-Duración:{reserva['duracion']}-Paquete:{reserva['id_paquete']}-Maquina:{reserva['Maquina']}"
+        encrypted_token = fernet.encrypt(token_plano.encode()).decode()
 
         # Obtener nombre y correo del usuario
         if usuario_normal:
@@ -1454,7 +1461,7 @@ def crear_token_reserva():
 
         # Enviar token por correo
         horario = reserva['fecha_reserva'].strftime('%Y-%m-%d %H:%M:%S') + f" por {reserva['duracion']} horas"
-        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", hashed_token, horario, nombre_usuario)
+        html_final = cargar_y_modificar_html_2("templates/Codigo_acceso.html", encrypted_token, horario, nombre_usuario)
         enviar_correo(REMITENTE, CONTRASEÑA, correo_usuario, "🔐 Token de acceso para tu simulador", html_final)
 
         # Insertar token en la base de datos
@@ -1467,13 +1474,13 @@ def crear_token_reserva():
             usuario_id if usuario_normal else None,
             usuario_id if usuario_google else None,
             id_reserva,
-            hashed_token,
+            encrypted_token,
             f"{info_local['fecha_local']} {info_local['hora_local']}",
             info_local["ubicacion_completa"]
         ))
         conn.commit()
 
-        return jsonify({'success': True, 'token': hashed_token}), 200
+        return jsonify({'success': True, 'token': encrypted_token}), 200
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
