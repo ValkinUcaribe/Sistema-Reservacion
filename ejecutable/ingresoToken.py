@@ -1,12 +1,32 @@
-import os
 import subprocess
 import string
-import time
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from pywinauto import Application
 from pywinauto.findwindows import find_windows, ElementNotFoundError
+import mysql.connector
+from dotenv import load_dotenv
+import os
+import datetime
+from cryptography.fernet import Fernet 
+import time
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Configuración de la base de datos
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
+}
+
+# Clave Fernet desde variable de entorno
+CLAVE_FERNET = os.getenv("FERNET_KEY")
+print(CLAVE_FERNET)
 
 # =================== CONFIGURACIÓN ====================
 TOKEN_VALIDO = "12345"
@@ -16,59 +36,90 @@ contrasena = "Unicaribe2025#"
 # ======================================================
 
 # 🔒 Solicita el token antes de iniciar todo
+def get_db_connection():
+    try:
+        return mysql.connector.connect(**DB_CONFIG)
+    except mysql.connector.Error as e:
+        print("Error al conectar a la base de datos:", e)
+        return None
+
 def solicitar_token():
-    # Crear ventana principal
+    def on_close():
+        # Aquí puedes cancelar cualquier proceso antes de salir
+        print("El usuario cerró la ventana. Cancelando proceso...")
+        root.destroy()
+        exit()  # Termina la aplicación completamente (opcional)
+    
     cerrar_workspaces_abierto()
     root = tk.Tk()
     root.title("Pantalla de Carga - Acceso al Simulador")
     root.attributes('-fullscreen', True)
 
-    # Función de validación de token
     def acceder():
         token = token_input.get()
-        if not token:  # Si el token está vacío
-            messagebox.showerror("Error", "Por favor ingrese su token.")  # MessageBox de error
-        else:
-            # Si el token no está vacío pero es incorrecto
-            if token != "123":  # Cambia "valor_correcto" por el valor real del token
-                messagebox.showerror("Error", "Token incorrecto. Intente nuevamente.")  # MessageBox de error
-            else:
-                messagebox.showinfo("Token recibido", f"Token ingresado: {token}")  # MessageBox de éxito
-                root.destroy()  # Cierra la ventana si el token es correcto
+        if not token:
+            messagebox.showerror("Error", "Por favor ingrese su token.")
+            return
 
-    # Función para salir del modo fullscreen
+        try:
+            fernet = Fernet(CLAVE_FERNET.encode())
+            mensaje_desencriptado = fernet.decrypt(token.encode()).decode()
+            print(f"Token desencriptado: {mensaje_desencriptado}")
+
+            partes = mensaje_desencriptado.split('-')
+            datos = {
+                k.strip(): v.strip()
+                for parte in partes if ':' in parte
+                for k, v in [parte.split(':', 1)]
+            }
+            id_reserva = datos.get('Reserva')
+
+            if not id_reserva:
+                messagebox.showerror("Error", "El token no contiene ID de reserva.")
+                return
+
+            conn = get_db_connection()
+            if conn is None:
+                messagebox.showerror("Error", "No se pudo conectar a la base de datos.")
+                return
+
+            cursor = conn.cursor()
+            cursor.execute("SELECT estado_reserva FROM Reservas WHERE id_reserva = %s", (id_reserva,))
+            resultado = cursor.fetchone()
+            conn.close()
+
+            if resultado is None:
+                messagebox.showerror("Error", f"No se encontró la reserva con ID {id_reserva}")
+            elif resultado[0].lower() != "activo":
+                messagebox.showerror("Error", f"La reserva con ID {id_reserva} no está activa (estado: {resultado[0]})")
+            else:
+                messagebox.showinfo("Acceso concedido", f"Reserva válida: {id_reserva}")
+                root.destroy()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Token inválido o error al validar: {e}")
+
     def salir_fullscreen(event):
         root.attributes('-fullscreen', False)
+        root.protocol("WM_DELETE_WINDOW", on_close)
 
     root.bind("<Escape>", salir_fullscreen)
+    root.protocol("WM_DELETE_WINDOW", on_close)
 
-    # Tamaño de pantalla
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
 
-    # Cargar y redimensionar imagen de fondo
     fondo = Image.open("Fondo1.jpg").resize((screen_width, screen_height), Image.LANCZOS)
     fondo = Image.blend(fondo, Image.new("RGB", (screen_width, screen_height), (0, 0, 0)), alpha=0.5)
     fondo_tk = ImageTk.PhotoImage(fondo)
 
-    # Canvas con imagen de fondo
     canvas = tk.Canvas(root, width=screen_width, height=screen_height)
     canvas.pack(fill="both", expand=True)
     canvas.create_image(0, 0, image=fondo_tk, anchor="nw")
 
-    # Contenedor centrado
-    frame = tk.Frame(
-        root,
-        bg="#37495E",         # Color más suave y elegante
-        bd=0,
-        highlightthickness=2,
-        highlightbackground="#ffffff",
-        padx=40,             # Padding horizontal
-        pady=30              # Padding vertical
-    )
+    frame = tk.Frame(root, bg="#37495E", bd=0, highlightthickness=2, highlightbackground="#ffffff", padx=40, pady=30)
     frame.place(relx=0.5, rely=0.5, anchor="center")
 
-    # Cargar y mostrar logos
     logo_frame = tk.Frame(frame, bg="#37495E")
     logo_frame.pack(pady=(0, 10))
 
@@ -82,15 +133,12 @@ def solicitar_token():
     logo2 = tk.Label(logo_frame, image=logo2_tk, bg="#37495E")
     logo2.pack(pady=(5, 0))
 
-    # Título y mensaje
     tk.Label(frame, text="Acceso al Simulador", font=("Helvetica", 20), fg="white", bg="#37495E").pack(pady=(10, 5))
     tk.Label(frame, text="Ingrese su token para continuar", font=("Helvetica", 12), fg="#DDDDDD", bg="#37495E").pack()
 
-    # Entrada de token
     token_input = tk.Entry(frame, width=30, font=("Helvetica", 12), justify="center", relief="flat")
     token_input.pack(pady=12, ipady=6)
 
-    # Botón de acceso
     tk.Button(
         frame,
         text="Acceder",
@@ -104,9 +152,7 @@ def solicitar_token():
         command=acceder
     ).pack(pady=(5, 10))
 
-    # Ejecutar
     root.mainloop()
-
 # 🧹 Cierra instancias de WorkSpaces abiertas antes de continuar
 def cerrar_workspaces_abierto():
     try:
