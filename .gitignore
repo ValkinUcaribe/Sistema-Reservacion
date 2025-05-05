@@ -5,3 +5,5 @@ __pycache__/
 .env
 .vscode
 client_secrets.json
+/ejecutable/
+/ejecutable_recarga/
