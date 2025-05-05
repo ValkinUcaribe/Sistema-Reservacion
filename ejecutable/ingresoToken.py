@@ -8,32 +8,88 @@ from pywinauto.findwindows import find_windows, ElementNotFoundError
 import mysql.connector
 from dotenv import load_dotenv
 import os
-import datetime
 from cryptography.fernet import Fernet 
 import time
+import requests
+from datetime import datetime
+import pytz
 
 # Cargar variables de entorno
 load_dotenv()
 
 # Configuración de la base de datos
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
+    "host": "brcwfojao80ca2qicg6w-mysql.services.clever-cloud.com",
+    "port": 3306,
+    "user": "usksfpvscyvgzgfk",
+    "password": "TlLuVntGUsMh4X8sp3hv" ,
+    "database": "brcwfojao80ca2qicg6w",
+    }
 
 # Clave Fernet desde variable de entorno
-CLAVE_FERNET = os.getenv("FERNET_KEY")
+CLAVE_FERNET = "1ZvrSOtnYH91WiFRav2vn2yy50waFgvcisNBafODeMk="
 print(CLAVE_FERNET)
 
 # =================== CONFIGURACIÓN ====================
-TOKEN_VALIDO = "12345"
-codigo_registro = "SLiad+BM4RAC"
-usuario = "ucaribe"
-contrasena = "Unicaribe2025#"
+CREDENCIALES_POR_MAQUINA = {
+    "1": {"usuario": "ucaribe", "contrasena": "Unicaribe2025#", "codigo_registro": "SLiad+BM4RAC"},
+    "2": {"usuario": "ucaribe", "contrasena": "Unicaribe2025#", "codigo_registro": "SLiad+BM4RAx"},
+    "3": {"usuario": "ucaribe", "contrasena": "Unicaribe2025#", "codigo_registro": "SLiad+BM4RAz"},
+}
 # ======================================================
+# Función para obtener la fecha y hora local basándose en la IP pública
+def obtener_ubicacion_y_hora():
+    try:
+        response = requests.get('https://ipinfo.io')
+        location = response.json()
+
+        timezone = location.get("timezone", "UTC")  # Default a UTC si no hay zona horaria
+        local_tz = pytz.timezone(timezone)
+        local_time = datetime.now(local_tz)
+
+        return {
+            "fecha_hora_local": local_time
+        }
+    except Exception as e:
+        print("Error al obtener la hora local:", e)
+        # Como fallback, usar UTC
+        return {
+            "fecha_hora_local": datetime.utcnow()
+        }
+
+# Función para insertar una nueva sesión
+def insertar_sesion(duracion_usuario, maquina_asignada, id_reserva):
+    print(duracion_usuario,maquina_asignada, id_reserva)
+    datos_hora = obtener_ubicacion_y_hora()
+    fecha_uso = datos_hora["fecha_hora_local"]
+    estado_sesion = "activo"  # Valor fijo
+
+    conn = get_db_connection()
+    if not conn:
+        print("No se pudo establecer conexión con la base de datos.")
+        return
+
+    try:
+        cursor = conn.cursor()
+        sql = """
+            INSERT INTO Sesiones (
+                duracion_usuario,
+                maquina_asignada,
+                id_reserva,
+                fecha_uso,
+                Estado_Sesion
+            )
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        valores = (duracion_usuario, maquina_asignada, id_reserva, fecha_uso, estado_sesion)
+        cursor.execute(sql, valores)
+        conn.commit()
+        print(f"✅ Sesión insertada con ID: {cursor.lastrowid}")
+    except mysql.connector.Error as err:
+        print("❌ Error al insertar sesión:", err)
+    finally:
+        cursor.close()
+        conn.close()
 
 # 🔒 Solicita el token antes de iniciar todo
 def get_db_connection():
@@ -44,6 +100,7 @@ def get_db_connection():
         return None
 
 def solicitar_token():
+    resultado = {"id_reserva": None, "maquina": None, "duracion": None}
     def on_close():
         # Aquí puedes cancelar cualquier proceso antes de salir
         print("El usuario cerró la ventana. Cancelando proceso...")
@@ -55,6 +112,7 @@ def solicitar_token():
     root.title("Pantalla de Carga - Acceso al Simulador")
     root.attributes('-fullscreen', True)
 
+
     def acceder():
         token = token_input.get()
         if not token:
@@ -64,7 +122,6 @@ def solicitar_token():
         try:
             fernet = Fernet(CLAVE_FERNET.encode())
             mensaje_desencriptado = fernet.decrypt(token.encode()).decode()
-            print(f"Token desencriptado: {mensaje_desencriptado}")
 
             partes = mensaje_desencriptado.split('-')
             datos = {
@@ -72,11 +129,24 @@ def solicitar_token():
                 for parte in partes if ':' in parte
                 for k, v in [parte.split(':', 1)]
             }
+
             id_reserva = datos.get('Reserva')
+            maquina = datos.get('Maquina')
+            duracion = datos.get('Duración')
 
             if not id_reserva:
                 messagebox.showerror("Error", "El token no contiene ID de reserva.")
                 return
+
+            credenciales = CREDENCIALES_POR_MAQUINA.get(maquina)
+            if not credenciales:
+                messagebox.showerror("Error", f"No se encontraron credenciales para la máquina {maquina}")
+                return
+
+            global usuario, contrasena, codigo_registro
+            usuario = credenciales["usuario"]
+            contrasena = credenciales["contrasena"]
+            codigo_registro = credenciales["codigo_registro"]
 
             conn = get_db_connection()
             if conn is None:
@@ -85,14 +155,17 @@ def solicitar_token():
 
             cursor = conn.cursor()
             cursor.execute("SELECT estado_reserva FROM Reservas WHERE id_reserva = %s", (id_reserva,))
-            resultado = cursor.fetchone()
+            resultado_sql = cursor.fetchone()
             conn.close()
 
-            if resultado is None:
+            if resultado_sql is None:
                 messagebox.showerror("Error", f"No se encontró la reserva con ID {id_reserva}")
-            elif resultado[0].lower() != "activo":
-                messagebox.showerror("Error", f"La reserva con ID {id_reserva} no está activa (estado: {resultado[0]})")
+            elif resultado_sql[0].lower() != "activo":
+                messagebox.showerror("Error", f"La reserva con ID {id_reserva} no está activa (estado: {resultado_sql[0]})")
             else:
+                resultado["id_reserva"] = id_reserva
+                resultado["maquina"] = maquina
+                resultado["duracion"] = duracion
                 messagebox.showinfo("Acceso concedido", f"Reserva válida: {id_reserva}")
                 root.destroy()
 
@@ -153,6 +226,8 @@ def solicitar_token():
     ).pack(pady=(5, 10))
 
     root.mainloop()
+    return resultado["id_reserva"], resultado["maquina"], resultado["duracion"]
+
 # 🧹 Cierra instancias de WorkSpaces abiertas antes de continuar
 def cerrar_workspaces_abierto():
     try:
@@ -187,90 +262,102 @@ def buscar_archivo(nombre_archivo, ruta_inicio):
             return os.path.join(root, nombre_archivo)
     return None
 
-# === INICIO DEL PROCESO ===
-solicitar_token()
+def iniciar_sesion_reserva(id_reserva, maquina_asignada, duracion_usuario, intento=1, max_intentos=5):
+    print(f"Intento #{intento} de iniciar sesión en WorkSpaces...")
 
-# Ejecutar GUI de pantalla completa
-ventana_gui = mostrar_ventana_proceso()
+    if intento > max_intentos:
+        print("❌ Número máximo de intentos alcanzado. Abortando proceso.")
+        return
 
-# Buscar y ejecutar WorkSpaces
-archivo_ejecutable = "workspaces.exe"
-unidades = [f"{letra}:\\" for letra in string.ascii_uppercase if os.path.exists(f"{letra}:\\")]
-ruta_encontrada = next((buscar_archivo(archivo_ejecutable, unidad) for unidad in unidades if buscar_archivo(archivo_ejecutable, unidad)), None)
+    try:
+        # === INICIO DEL PROCESO ===
+        ventana_gui = mostrar_ventana_proceso()  # GUI pantalla completa
 
-if ruta_encontrada:
-    print(f"Ejecutable encontrado en: {ruta_encontrada}")
-    subprocess.Popen([ruta_encontrada])
-else:
-    print("No se encontró el ejecutable workspaces.exe en ninguna unidad.")
-    exit()
+        # Buscar y ejecutar WorkSpaces
+        archivo_ejecutable = "workspaces.exe"
+        unidades = [f"{letra}:\\" for letra in string.ascii_uppercase if os.path.exists(f"{letra}:\\")]
+        ruta_encontrada = next((buscar_archivo(archivo_ejecutable, unidad) for unidad in unidades if buscar_archivo(archivo_ejecutable, unidad)), None)
 
-time.sleep(20)
+        if not ruta_encontrada:
+            print("❌ No se encontró el ejecutable workspaces.exe en ninguna unidad.")
+            ventana_gui.destroy()
+            return iniciar_sesion_reserva(id_reserva, maquina_asignada, duracion_usuario, intento + 1)
 
-try:
-    app = Application(backend="uia").connect(title_re=".*Amazon WorkSpaces.*")
-    dlg = app.window(title_re=".*Amazon WorkSpaces.*")
-    dlg.set_focus()
-    print("Ventana encontrada y en foco.")
-    time.sleep(1)
-    
-    all_controls = dlg.descendants()
-    combo_box = next((ctrl for ctrl in all_controls if ctrl.element_info.control_type == "ComboBox"), None)
-    if combo_box:
-        edit_controls = combo_box.descendants(control_type="Edit")
-    else:
-        edit_controls = []
+        print(f"✅ Ejecutable encontrado en: {ruta_encontrada}")
+        subprocess.Popen([ruta_encontrada])
+        time.sleep(20)
 
-    edit_controls += [ctrl for ctrl in all_controls if ctrl.element_info.control_type == "Edit"]
+        # Conectarse a la ventana
+        app = Application(backend="uia").connect(title_re=".*Amazon WorkSpaces.*")
+        dlg = app.window(title_re=".*Amazon WorkSpaces.*")
+        dlg.set_focus()
+        print("✅ Ventana encontrada y en foco.")
 
-    if edit_controls:
-        print("Campo de registro encontrado, ingresando código...")
+        # Buscar campo de código de registro
+        all_controls = dlg.descendants()
+        combo_box = next((ctrl for ctrl in all_controls if ctrl.element_info.control_type == "ComboBox"), None)
+        edit_controls = combo_box.descendants(control_type="Edit") if combo_box else []
+        edit_controls += [ctrl for ctrl in all_controls if ctrl.element_info.control_type == "Edit"]
+
+        if not edit_controls:
+            raise Exception("No se encontró el campo de código de registro.")
+
+        print("✅ Ingresando código de registro...")
         edit_controls[0].set_focus()
         edit_controls[0].set_edit_text(codigo_registro)
         time.sleep(0.5)
         edit_controls[0].type_keys("{ENTER}")
-        
         time.sleep(2)
+
+        # Presionar botón "Aceptar" si aparece
         all_controls = dlg.descendants()
         aceptar_boton = next((ctrl for ctrl in all_controls if ctrl.element_info.control_type == "Button" and "Aceptar" in ctrl.window_text()), None)
         if aceptar_boton:
             aceptar_boton.click()
-            print("Botón Aceptar presionado automáticamente.")
-    else:
-        print("No se encontró el campo de registro.")
-        exit()
+            print("✅ Botón Aceptar presionado automáticamente.")
 
-    print("Esperando 20 segundos para que aparezcan los campos de usuario y contraseña...")
-    time.sleep(20)
+        print("⌛ Esperando campos de autenticación...")
+        time.sleep(20)
+        all_controls = dlg.descendants()
+        auth_container = next((ctrl for ctrl in all_controls if ctrl.element_info.control_type in ["Document", "Pane"] and "Authentication" in ctrl.window_text()), None)
+        if not auth_container:
+            raise Exception("No se encontró el contenedor de autenticación.")
 
-    all_controls = dlg.descendants()
-    auth_container = next((ctrl for ctrl in all_controls if ctrl.element_info.control_type in ["Document", "Pane"] and "Authentication" in ctrl.window_text()), None)
-
-    if auth_container:
         auth_controls = auth_container.descendants()
         edit_controls = [ctrl for ctrl in auth_controls if ctrl.element_info.control_type == "Edit"]
-    else:
-        print("No se encontró el contenedor de autenticación.")
-        exit()
+        if len(edit_controls) < 2:
+            raise Exception("No se encontraron campos de usuario y contraseña.")
 
-    if len(edit_controls) >= 2:
-        print("Ingresando credenciales...")
+        print("✅ Ingresando credenciales...")
         edit_controls[0].set_focus()
         edit_controls[0].set_edit_text(usuario)
         time.sleep(0.5)
-
         edit_controls[1].set_focus()
         edit_controls[1].set_edit_text(contrasena)
         time.sleep(0.5)
         edit_controls[1].type_keys("{ENTER}")
-    else:
-        print("No se encontraron los campos de usuario y contraseña.")
 
-except Exception as e:
-    print("Error al interactuar con la ventana:", e)
+        # Si llegamos aquí, el proceso fue exitoso
+        insertar_sesion(duracion_usuario, maquina_asignada, id_reserva)
+        print("✅ Sesión insertada correctamente.")
 
-# ✅ Esperar 30 segundos antes de cerrar la ventana GUI
-if ventana_gui:
-    print("Esperando 30 segundos antes de cerrar la ventana GUI...")
-    time.sleep(30)
-    ventana_gui.destroy()
+        print("⌛ Esperando 30 segundos antes de cerrar GUI...")
+        time.sleep(30)
+        if ventana_gui:
+            ventana_gui.destroy()
+        print("✅ GUI cerrada. Proceso finalizado.")
+
+    except Exception as e:
+        print(f"❌ Error durante el proceso: {e}")
+        if ventana_gui:
+            ventana_gui.destroy()
+        return iniciar_sesion_reserva(id_reserva, maquina_asignada, duracion_usuario, intento + 1)
+
+def iniciar_proceso_workspaces():
+
+    id_reserva, maquina_asignada, duracion_usuario = solicitar_token()
+
+    iniciar_sesion_reserva(id_reserva, maquina_asignada, duracion_usuario)
+
+if __name__ == "__main__":
+    iniciar_proceso_workspaces()
