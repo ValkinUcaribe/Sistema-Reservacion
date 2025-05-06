@@ -376,11 +376,15 @@ def login():
 
     return render_template('Login.html')
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Función de registro de usuario a la página
+from flask import session, redirect, url_for, request, render_template, flash, jsonify
+import mysql.connector
+import time
+from werkzeug.security import generate_password_hash
+import os
+
+# Función de registro de usuario a la página 
 @app.route('/registro', methods=['GET', 'POST'])
 def register():
-    global nombre_usuario, correo_usuario
-
     if request.method == 'POST':
         # Capturar datos del formulario
         email = request.form.get('email')
@@ -408,7 +412,7 @@ def register():
             cursor = connection.cursor(dictionary=True)
 
             # Verificar si el correo ya existe en alguna de las tablas (Usuarios o Usuarios_Google)
-            cursor.execute("""
+            cursor.execute(""" 
                 SELECT 'Usuarios' AS source FROM Usuarios WHERE correo = %s 
                 UNION ALL 
                 SELECT 'Usuarios_Google' AS source FROM Usuarios_Google WHERE correo = %s
@@ -423,9 +427,9 @@ def register():
                     flash("El correo ya está registrado con Google. Inicia sesión con Google.", "error")
                 return redirect(url_for('register'))  # Evita continuar con el registro
 
-            # Solo si el usuario NO existe, se asignan las variables globales y se envía el PIN
-            correo_usuario = email
-            nombre_usuario = nombre
+            # Solo si el usuario NO existe, se asignan los valores en la session y se envía el PIN
+            session['correo_usuario'] = email
+            session['nombre_usuario'] = nombre
 
             flash("Registro exitoso. Se ha enviado un PIN a tu correo.", "success")
             return envio_pin()
@@ -444,10 +448,10 @@ def register():
 
     return render_template('Register.html')
 
-# Ruta para terminos y condiciones
+# Ruta para términos y condiciones
 @app.route('/terminos', methods=['GET', 'POST'])
 def terminos():
-      return render_template('Terminos_Condiciones.html')
+    return render_template('Terminos_Condiciones.html')
 
 # Ruta para aviso de privacidad
 @app.route('/privacidad', methods=['GET', 'POST'])
@@ -456,13 +460,17 @@ def privacidad():
 
 @app.route('/envio_pin', methods=['POST'])
 def envio_pin():
-    global pin, pin_timestamp, correo_usuario
-
+    # Verificar si el correo está en la sesión
+    correo_usuario = session.get('correo_usuario')
     if not correo_usuario:
         return jsonify({"error": "Correo no proporcionado"}), 400
 
     pin = generar_pin()
     pin_timestamp = time.time()
+
+    # Guardar el PIN y timestamp en la sesión
+    session['pin'] = pin
+    session['pin_timestamp'] = pin_timestamp
 
     # Obtener nombre desde la base de datos
     try:
@@ -491,16 +499,19 @@ def envio_pin():
     else:
         return jsonify({"error": "No se pudo cargar la plantilla HTML"}), 500
 
-# Funcion de reenvio de PIN por si no le llego, pero es mas para cuando puso mal el correo
 @app.route('/reenvio/<destino>', methods=['GET', 'POST'])
 def reenvio(destino):
-    global pin, pin_timestamp, correo_usuario
-
+    # Verificar si el correo está en la sesión
+    correo_usuario = session.get('correo_usuario')
     if not correo_usuario:
         return jsonify({"error": "Correo no proporcionado"}), 400
 
     pin = generar_pin()
     pin_timestamp = time.time()
+
+    # Guardar el PIN y timestamp en la sesión
+    session['pin'] = pin
+    session['pin_timestamp'] = pin_timestamp
 
     # Obtener nombre desde la base de datos
     try:
@@ -529,17 +540,12 @@ def reenvio(destino):
     else:
         return jsonify({"error": "No se pudo cargar la plantilla HTML"}), 500
 
-
-# Funcion para la validacion del PIN
 @app.route('/validacion', methods=['GET', 'POST'])
 def validacion():
-    global pin, pin_timestamp, correo_usuario
-    
-    correo = request.args.get('correo')  # Obtener el correo desde los parámetros de la URL
-    if not correo:  # Verificar si no se recibe el correo
+    correo_usuario = session.get('correo_usuario')
+    if not correo_usuario:
         flash("Correo no proporcionado.", "error")
         return redirect(url_for('register'))
-    print(correo_usuario)
 
     if request.method == 'POST':
         pin_ingresado = request.form.get('pin')  # Captura el PIN ingresado
@@ -547,32 +553,29 @@ def validacion():
         # Validar que el PIN no esté vacío
         if not pin_ingresado:
             flash("Por favor ingrese el PIN.", "error")
-            return redirect(url_for('validacion', correo=correo))
+            return redirect(url_for('validacion', correo=correo_usuario))
         
+        # Obtener el PIN y timestamp de la sesión
+        pin = session.get('pin')
+        pin_timestamp = session.get('pin_timestamp')
+
         # Verificar si el PIN es correcto y aún no ha expirado
         if pin_ingresado == pin and (time.time() - pin_timestamp) <= PIN_EXPIRATION_SECONDS:
-            return redirect(url_for('contrasena', correo=correo))
+            return redirect(url_for('contrasena', correo=correo_usuario))
         else:
             flash("PIN incorrecto o expirado.", "error")
         
-    return render_template('Validacion.html', correo=correo)
+    return render_template('Validacion.html', correo=correo_usuario)
 
-# Funcion para colocar la contraseña de acceso del usuario
-# Modificar para que sea mas simple
-# Poner update si es olvide contraseña
-@app.route('/contrasena', methods=['GET', 'POST']) 
+@app.route('/contrasena', methods=['GET', 'POST'])
 def contrasena():
-    global nombre_usuario, correo_usuario  # Usamos las variables globales para el nombre y correo
+    correo_usuario = session.get('correo_usuario')
+    nombre_usuario = session.get('nombre_usuario')
 
-    if not nombre_usuario or not correo_usuario:
-        print("Nombre o correo no proporcionado")
+    if not correo_usuario or not nombre_usuario:
         message = "Nombre o correo no proporcionado"
         message_color = "red"
         return render_template('Password.html', message=message, message_color=message_color)
-
-    print(f"Correo recibido: {correo_usuario}, Nombre recibido: {nombre_usuario}")
-    cursor = None
-    connection = None
 
     if request.method == 'POST':
         nueva_contrasena = request.form.get('password')
@@ -590,24 +593,20 @@ def contrasena():
 
         try:
             hashed_password = generate_password_hash(nueva_contrasena)
-            print(f"Contraseña hasheada: {hashed_password}")
 
             connection = mysql.connector.connect(**DB_CONFIG)
             cursor = connection.cursor()
-            print("Conexión a la base de datos establecida")
 
             # Verificar si el usuario ya existe
             query_check = "SELECT id_usuario FROM Usuarios WHERE correo = %s"
             cursor.execute(query_check, (correo_usuario,))
             resultado = cursor.fetchone()
-            cursor.fetchall()
 
             if resultado:
                 # Usuario ya existe → actualizar contraseña
                 query_update = "UPDATE Usuarios SET contrasena = %s WHERE correo = %s"
                 cursor.execute(query_update, (hashed_password, correo_usuario))
                 connection.commit()
-                print("Contraseña actualizada para usuario existente")
                 return redirect('/', code=302)
             else:
                 # Usuario no existe → insertar nuevo registro
@@ -625,7 +624,6 @@ def contrasena():
                 )
                 cursor.execute(query_insert, valores)
                 connection.commit()
-                print("Usuario registrado con nueva contraseña")
 
                 # ✅ Enviar correo de bienvenida
                 ruta_html = "templates/Welcome.html"
@@ -634,15 +632,11 @@ def contrasena():
                 if html_modificado:
                     destino = correo_usuario
                     asunto = "¡Bienvenido a Valkin Simulator!"
-
                     enviar_correo(REMITENTE, CONTRASEÑA, destino, asunto, html_modificado)
-                else:
-                    print("❌ No se pudo cargar el HTML para el correo de bienvenida.")
 
                 return redirect('/', code=302)
 
         except mysql.connector.Error as err:
-            print(f"Error en la base de datos: {err}")
             message = f"Error en la base de datos: {err}"
             message_color = "red"
             return render_template('Password.html', correo=correo_usuario, message=message, message_color=message_color)
@@ -650,15 +644,10 @@ def contrasena():
         finally:
             if cursor:
                 cursor.close()
-                print("Cursor cerrado")
             if connection:
                 connection.close()
-                print("Conexión cerrada")
 
-    # Si es GET, renderiza el formulario
-    print("Método GET, mostrando formulario con correo")
     return render_template('Password.html', correo=correo_usuario)
-
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Funcion para el olvido de contraseña y se quiere restablecer
 @app.route("/olvido", methods=['GET', 'POST'])
