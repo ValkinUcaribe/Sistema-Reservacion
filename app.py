@@ -24,7 +24,6 @@ from cryptography.fernet import Fernet
 
 load_dotenv()
 clave = os.getenv("FERNET_KEY")
-print(clave)
 
 if clave is None:
     raise ValueError("FERNET_KEY no está definida en el archivo .env")
@@ -62,20 +61,9 @@ def user_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Mostrar información de las cookies
-        cookies_info = request.cookies  # Obtenemos todas las cookies
-
-        # Si deseas imprimir la información de las cookies, puedes hacerlo
-        print("Información de las cookies:")
-        for cookie_key, cookie_value in cookies_info.items():
-            print(f"{cookie_key}: {cookie_value}")
-
-        # Validación de admin
-        if 'user_id' not in session or session.get('tipo_usuario_admin') != 'admin':
+        if session.get('tipo_usuario_admin') != 'admin':
             return redirect('/administrador')
-
         return f(*args, **kwargs)
-
     return decorated_function
 
 def cargar_datos_usuario():
@@ -2068,11 +2056,13 @@ def administrador_login():
     return render_template("admin_login.html", error=error)
 
 @app.route('/administrador_panel', methods=['GET', 'POST'])
+@admin_required
 def administrador_panel():
     return render_template("admin_panel.html")
 
 # Ruta para obtener las estadísticas de los usuarios
 @app.route('/usuarios/estadisticas', methods=['GET'])
+@admin_required
 def obtener_estadisticas_usuarios():
     connection = get_db_connection()
     if connection is None:
@@ -2151,6 +2141,7 @@ def obtener_estadisticas_usuarios():
     
 # Ruta 1: Estadísticas de reservas
 @app.route('/estadisticas_reservas', methods=['GET'])
+@admin_required
 def estadisticas_reservas():
     connection = get_db_connection()
     if not connection:
@@ -2199,6 +2190,7 @@ def estadisticas_reservas():
 
 # Ruta 2: Estadísticas de paquetes adquiridos
 @app.route('/estadisticas_paquetes', methods=['GET'])
+@admin_required
 def estadisticas_paquetes():
     connection = get_db_connection()
     if not connection:
@@ -2230,6 +2222,7 @@ def estadisticas_paquetes():
     })
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/administrador_paquetes', methods=['GET'])
+@admin_required
 def administrador_paquetes():
     connection = get_db_connection()
     paquetes = []
@@ -2245,6 +2238,7 @@ def administrador_paquetes():
     return render_template("admin_paquete.html", paquetes=paquetes)
 
 @app.route('/agregar_paquete', methods=['GET', 'POST'])
+@admin_required
 def agregar_paquete():
     if request.method == 'POST':
         nombre = request.form['nombre']
@@ -2276,6 +2270,7 @@ def agregar_paquete():
     return render_template("agregar_paquete.html")
 
 @app.route('/editar_paquete/<int:id_paquete>', methods=['GET', 'POST'])
+@admin_required
 def editar_paquete(id_paquete):
     connection = get_db_connection()
     paquete = None
@@ -2324,6 +2319,7 @@ def editar_paquete(id_paquete):
     return render_template('editar_paquete.html', paquete=paquete)
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/administrador_tutoriales', methods=['GET', 'POST'])
+@admin_required
 def administrador_tutoriales():
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
@@ -2337,6 +2333,7 @@ def administrador_tutoriales():
     return render_template("admin_tutoriales.html", tutoriales=tutoriales)
 
 @app.route('/agregar_tutorial', methods=['GET', 'POST'])
+@admin_required
 def agregar_tutorial():
     if request.method == 'POST':
         titulo = request.form['titulo']
@@ -2354,6 +2351,7 @@ def agregar_tutorial():
     return render_template("agregar_tutorial.html")
 
 @app.route('/editar_tutorial/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def editar_tutorial(id):
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
@@ -2384,6 +2382,7 @@ def editar_tutorial(id):
     return render_template("editar_tutorial.html", tutorial=tutorial)
 
 @app.route('/eliminar_tutorial/<int:id>', methods=['POST'])
+@admin_required
 def eliminar_tutorial(id):
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -2398,6 +2397,7 @@ def eliminar_tutorial(id):
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/administrador_tienda', methods=['GET'])
+@admin_required
 def administrador_tienda():
     connection = get_db_connection()
     productos = []
@@ -2412,6 +2412,7 @@ def administrador_tienda():
     return render_template("admin_tienda.html", productos=productos)
 
 @app.route('/agregar_producto', methods=['GET', 'POST'])
+@admin_required
 def agregar_producto():
     if request.method == 'POST':
         nombre = request.form['nombre']
@@ -2435,6 +2436,7 @@ def agregar_producto():
     return render_template('agregar_producto.html')
 
 @app.route('/editar_producto/<int:id>', methods=['GET', 'POST'])
+@admin_required
 def editar_producto(id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -2465,6 +2467,7 @@ def editar_producto(id):
     return render_template('editar_producto.html', producto=producto)
 
 @app.route('/eliminar_producto/<int:id>', methods=['POST'])
+@admin_required
 def eliminar_producto(id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -2477,16 +2480,11 @@ def eliminar_producto(id):
 @app.route('/logout_admin')
 def logout_admin():
     session.clear()
-    # Redirigir al login
     return redirect(url_for('administrador_login'))
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/tutoriales', methods=['GET', 'POST'])
 @user_required
 def tutoriales():
-    # Redirigir a login si el usuario no está autenticado
-    if not (usuario_normal or usuario_google) or not id_usuario_global:
-        return redirect(url_for('login'))
-
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
