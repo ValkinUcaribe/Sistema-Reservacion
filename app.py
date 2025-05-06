@@ -2230,7 +2230,6 @@ def estadisticas_paquetes():
     })
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/administrador_paquetes', methods=['GET'])
-@admin_required
 def administrador_paquetes():
     connection = get_db_connection()
     paquetes = []
