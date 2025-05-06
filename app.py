@@ -2056,7 +2056,6 @@ def administrador_login():
     return render_template("admin_login.html", error=error)
 
 @app.route('/administrador_panel', methods=['GET', 'POST'])
-@admin_required
 def administrador_panel():
     return render_template("admin_panel.html")
 
