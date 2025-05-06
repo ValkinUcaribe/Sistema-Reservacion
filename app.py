@@ -385,6 +385,7 @@ import os
 # Función de registro de usuario a la página 
 @app.route('/registro', methods=['GET', 'POST'])
 def register():
+    print(session)
     if request.method == 'POST':
         # Capturar datos del formulario
         email = request.form.get('email')
@@ -460,6 +461,7 @@ def privacidad():
 
 @app.route('/envio_pin', methods=['POST'])
 def envio_pin():
+    print(session)
     # Verificar si el correo está en la sesión
     correo_usuario = session.get('correo_usuario')
     if not correo_usuario:
@@ -501,6 +503,7 @@ def envio_pin():
 
 @app.route('/reenvio/<destino>', methods=['GET', 'POST'])
 def reenvio(destino):
+    print(session)
     # Verificar si el correo está en la sesión
     correo_usuario = session.get('correo_usuario')
     if not correo_usuario:
@@ -542,6 +545,7 @@ def reenvio(destino):
 
 @app.route('/validacion', methods=['GET', 'POST'])
 def validacion():
+    print(session)
     correo_usuario = session.get('correo_usuario')
     if not correo_usuario:
         flash("Correo no proporcionado.", "error")
@@ -569,6 +573,7 @@ def validacion():
 
 @app.route('/contrasena', methods=['GET', 'POST'])
 def contrasena():
+    print(session)
     correo_usuario = session.get('correo_usuario')
     nombre_usuario = session.get('nombre_usuario')
 
@@ -633,7 +638,6 @@ def contrasena():
                     destino = correo_usuario
                     asunto = "¡Bienvenido a Valkin Simulator!"
                     enviar_correo(REMITENTE, CONTRASEÑA, destino, asunto, html_modificado)
-
                 return redirect('/', code=302)
 
         except mysql.connector.Error as err:
@@ -652,22 +656,23 @@ def contrasena():
 # Funcion para el olvido de contraseña y se quiere restablecer
 @app.route("/olvido", methods=['GET', 'POST'])
 def olvido():
-    global correo_usuario, nombre_usuario  # Asegurar que usa la variable global
-
+    print(session)
+    # Usar session en lugar de variables globales
     if request.method == 'POST':
         correo_usuario = request.form.get('email')
         print(correo_usuario)
-        nombre_usuario = "usuario_temp"
 
         if not correo_usuario:
             return jsonify({"error": "Correo no proporcionado"}), 400
+        
+        # Almacenar el correo y nombre temporal en la sesión
+        session['correo_usuario'] = correo_usuario
+        session['nombre_usuario'] = "usuario_temp"  # O el nombre que desees
 
         return envio_pin()  # Llama a la función existente para enviar el PIN
 
     # Si es GET, mostrar el formulario para ingresar el correo
     return render_template('olvido.html')
-
-
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Función para entrar al home de la página
 # ver la forma de tomar las reservaciones y cambiar lo de microsft tanto nombre como imagen
