@@ -31,9 +31,6 @@ if clave is None:
 
 fernet = Fernet(clave)
 
-from functools import wraps
-from flask import session, redirect
-
 def user_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -2062,6 +2059,164 @@ def administrador_login():
 @app.route('/administrador_panel', methods=['GET', 'POST'])
 def administrador_panel():
     return render_template("admin_panel.html")
+
+# Ruta para obtener las estadísticas de los usuarios
+@app.route('/usuarios/estadisticas', methods=['GET'])
+def obtener_estadisticas_usuarios():
+    connection = get_db_connection()
+    if connection is None:
+        return jsonify({"error": "No se pudo conectar a la base de datos."}), 500
+
+    try:
+        # Fecha límite para usuarios nuevos (última semana)
+        fecha_limite = datetime.now() - timedelta(weeks=1)
+
+        cursor = connection.cursor(dictionary=True)
+
+        # Consulta de usuarios frecuentes por reservas (usuarios que han hecho más reservas)
+        cursor.execute("""
+            SELECT Usuarios.id_usuario, Usuarios.nombre, Usuarios.apellidos, COUNT(Reservas.id_reserva) AS total_reservas
+            FROM Usuarios
+            JOIN Reservas ON Reservas.id_usuario = Usuarios.id_usuario OR Reservas.id_usuario_google = Usuarios.id_usuario
+            GROUP BY Usuarios.id_usuario
+            ORDER BY total_reservas DESC
+            LIMIT 10
+        """)
+        usuarios_frecuentes = cursor.fetchall()
+
+        # Usuarios nuevos de la última semana
+        cursor.execute("""
+            SELECT id_usuario, nombre, apellidos, fecha_registro
+            FROM Usuarios
+            WHERE fecha_registro >= %s
+        """, (fecha_limite,))
+        usuarios_nuevos = cursor.fetchall()
+
+        # Consulta por tipo de perfil
+        cursor.execute("""
+            SELECT tipo_perfil, COUNT(id_usuario) AS cantidad
+            FROM Usuarios
+            GROUP BY tipo_perfil
+        """)
+        perfil_tipo = cursor.fetchall()
+
+        # Consulta por institución
+        cursor.execute("""
+            SELECT institucion, COUNT(id_usuario) AS cantidad
+            FROM Usuarios
+            WHERE institucion IS NOT NULL AND institucion != ''
+            GROUP BY institucion
+        """)
+        perfil_institucion = cursor.fetchall()
+
+        # Usuarios Google frecuentes (si hay tabla de Google usuarios)
+        cursor.execute("""
+            SELECT Usuarios_Google.id_usuario_google, Usuarios_Google.nombre, Usuarios_Google.apellidos, COUNT(Reservas.id_reserva) AS total_reservas
+            FROM Usuarios_Google
+            JOIN Reservas ON Reservas.id_usuario_google = Usuarios_Google.id_usuario_google
+            GROUP BY Usuarios_Google.id_usuario_google
+            ORDER BY total_reservas DESC
+            LIMIT 10
+        """)
+        usuarios_google_frecuentes = cursor.fetchall()
+
+        # Cerrar la conexión
+        cursor.close()
+        connection.close()
+
+        # Estructura de datos para la respuesta
+        data = {
+            'usuarios_frecuentes': usuarios_frecuentes,
+            'usuarios_nuevos': usuarios_nuevos,
+            'perfil_tipo': perfil_tipo,
+            'perfil_institucion': perfil_institucion,
+            'usuarios_google_frecuentes': usuarios_google_frecuentes
+        }
+
+        return jsonify(data), 200
+
+    except mysql.connector.Error as e:
+        return jsonify({"error": f"Error al consultar la base de datos: {str(e)}"}), 500
+    
+# Ruta 1: Estadísticas de reservas
+@app.route('/estadisticas_reservas', methods=['GET'])
+def estadisticas_reservas():
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+
+    cursor = connection.cursor(dictionary=True)
+
+    query = """
+        SELECT 
+            HOUR(fecha_reserva) AS hora,
+            COUNT(*) AS total_reservas
+        FROM Reservas
+        GROUP BY hora
+        ORDER BY total_reservas DESC
+    """
+    cursor.execute(query)
+    horas_demandadas = cursor.fetchall()
+
+    query_dia = "SELECT DATE(fecha_reserva) AS dia, COUNT(*) AS total FROM Reservas GROUP BY dia"
+    query_semana = "SELECT YEARWEEK(fecha_reserva) AS semana, COUNT(*) AS total FROM Reservas GROUP BY semana"
+    query_mes = "SELECT DATE_FORMAT(fecha_reserva, '%Y-%m') AS mes, COUNT(*) AS total FROM Reservas GROUP BY mes"
+    query_anio = "SELECT YEAR(fecha_reserva) AS anio, COUNT(*) AS total FROM Reservas GROUP BY anio"
+
+    cursor.execute(query_dia)
+    por_dia = cursor.fetchall()
+
+    cursor.execute(query_semana)
+    por_semana = cursor.fetchall()
+
+    cursor.execute(query_mes)
+    por_mes = cursor.fetchall()
+
+    cursor.execute(query_anio)
+    por_anio = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return jsonify({
+        "horarios_mas_demandados": horas_demandadas,
+        "reservas_por_dia": por_dia,
+        "reservas_por_semana": por_semana,
+        "reservas_por_mes": por_mes,
+        "reservas_por_anio": por_anio
+    })
+
+# Ruta 2: Estadísticas de paquetes adquiridos
+@app.route('/estadisticas_paquetes', methods=['GET'])
+def estadisticas_paquetes():
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+
+    cursor = connection.cursor(dictionary=True)
+
+    query = """
+        SELECT 
+            p.id_paquete,
+            p.nombre_paquete,
+            p.descripcion,
+            p.precio,
+            p.horas,
+            COUNT(r.id_paquete) AS veces_adquirido
+        FROM Paquetes p
+        LEFT JOIN Reservas r ON p.id_paquete = r.id_paquete
+        GROUP BY p.id_paquete
+        ORDER BY veces_adquirido DESC
+    """
+    cursor.execute(query)
+    paquetes_estadisticas = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return jsonify({
+        "paquetes_adquiridos": paquetes_estadisticas
+    })
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/administrador_paquetes', methods=['GET'])
 def administrador_paquetes():
