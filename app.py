@@ -872,7 +872,7 @@ def reservacion():
                 print("Usuario Google:", id_usuario_global)
 
             # Validar que no se pueda reservar en el pasado
-            ahora = datetime.now()
+            ahora = datetime.now().replace(second=0, microsecond=0)
             print(ahora)
             if fecha_reserva < ahora:
                 return jsonify({"success": False, "error": "No se puede hacer una reservación en el pasado"}), 400
