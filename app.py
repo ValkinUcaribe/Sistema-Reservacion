@@ -376,12 +376,6 @@ def login():
 
     return render_template('Login.html')
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-from flask import session, redirect, url_for, request, render_template, flash, jsonify
-import mysql.connector
-import time
-from werkzeug.security import generate_password_hash
-import os
-
 # Función de registro de usuario a la página 
 @app.route('/registro', methods=['GET', 'POST'])
 def register():
@@ -690,9 +684,7 @@ def home():
     try:
         # Obtener la fecha y hora local utilizando la función obtener_ubicacion_y_hora()
         info_local = obtener_ubicacion_y_hora()
-        fecha_local = info_local["fecha_local"]
-        hora_local = info_local["hora_local"]
-        fecha_hora_local = f"{fecha_local} {hora_local}"
+        fecha_local = datetime.now().replace(second=0, microsecond=0)
 
         # 🔹 Determinar filtro según tipo de usuario
         if usuario_normal:
