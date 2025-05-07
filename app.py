@@ -277,6 +277,8 @@ def obtener_ubicacion_y_hora():
 def obtener_hora_cancun():
     zona_cancun = pytz.timezone("America/Cancun")
     ahora = datetime.now(zona_cancun).replace(second=0, microsecond=0)
+    print("hora de cancun")
+    print(ahora)
     return ahora
 
 # Crear un archivo con variables y tomarlas de aqui
