@@ -274,7 +274,7 @@ def obtener_ubicacion_y_hora():
     }
 
 #Obtener hora para no hacer reserva en el pasado
-def obtener_fecha_cancun():
+def obtener_hora_cancun():
     zona_cancun = pytz.timezone("America/Cancun")
     ahora = datetime.now(zona_cancun).replace(second=0, microsecond=0)
     return ahora
