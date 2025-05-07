@@ -871,6 +871,12 @@ def reservacion():
                 id_usuario_google_insert = id_usuario_global
                 print("Usuario Google:", id_usuario_global)
 
+            # Validar que no se pueda reservar en el pasado
+            ahora = datetime.now()
+            print(ahora)
+            if fecha_reserva < ahora:
+                return jsonify({"success": False, "error": "No se puede hacer una reservación en el pasado"}), 400
+
             # Buscar máquina disponible
             maquina_asignada = None
             for maquina in [1, 2]:
@@ -1256,7 +1262,6 @@ def horas_disponibles():
         cursor.close()
         connection.close()
 
-
 @app.route("/reservas_cercanas", methods=["GET"])
 @user_required
 def obtener_reservas_cercanas():
@@ -1270,10 +1275,15 @@ def obtener_reservas_cercanas():
         # 📌 Determinar el tipo de usuario y aplicar filtro
         if usuario_normal:
             filtro_usuario = "id_usuario = %s"
+            cursor.execute("SELECT nombre FROM Usuarios WHERE id_usuario = %s", (id_usuario_global,))
         elif usuario_google:
             filtro_usuario = "id_usuario_google = %s"
+            cursor.execute("SELECT nombre FROM Usuarios_Google WHERE id_usuario_google = %s", (id_usuario_global,))
         else:
             return jsonify({"success": False, "error": "Usuario no identificado"}), 400
+
+        resultado_nombre = cursor.fetchone()
+        nombre_usuario = resultado_nombre["nombre"] if resultado_nombre else "Desconocido"
 
         # 🕒 Obtener fecha y hora actual
         fecha_actual = datetime.now()
@@ -1322,7 +1332,12 @@ def obtener_reservas_cercanas():
         for reserva in reservas:
             print(f"📅 {reserva['fecha_formateada']} ⏰ {reserva['hora_inicio']} - {reserva['hora_fin']}")
 
-        return jsonify({"success": True, "reservas": reservas, "cambiadas": total_cambio})
+        return jsonify({
+            "success": True,
+            "nombre_usuario": nombre_usuario,
+            "reservas": reservas,
+            "cambiadas": total_cambio
+        })
 
     except mysql.connector.Error as e:
         print(f"❌ Error en la base de datos: {e}")
