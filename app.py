@@ -275,21 +275,20 @@ def obtener_ubicacion_y_hora():
 
 #Obtener hora para no hacer reserva en el pasado
 def obtener_hora_cancun():
-    # Obtener la zona horaria de Cancún
+    # Zona horaria de Cancún
     zona_cancun = pytz.timezone("America/Cancun")
     
-    # Obtener la hora actual en Cancún
+    # Obtener la hora actual en Cancún (con zona horaria)
     ahora = datetime.now(zona_cancun).replace(second=0, microsecond=0)
     
-    # Convertir el datetime a string con el formato deseado
-    hora_str = ahora.strftime('%Y-%m-%d %H:%M:%S')
+    # Convertir a un datetime naive (sin zona horaria)
+    ahora_naive = ahora.replace(tzinfo=None)
     
-    # Imprimir la hora en formato string
-    print("hora de cancun")
-    print(hora_str)
+    # Imprimir la hora naive
+    print("hora de cancun (datetime sin zona horaria)")
+    print(ahora_naive)  # Esto será un datetime naive
     
-    # Devolver la hora como string
-    return hora_str
+    return ahora_naive
 
 # Crear un archivo con variables y tomarlas de aqui
 # Configuración de la base de datos
