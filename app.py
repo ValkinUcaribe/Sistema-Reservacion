@@ -683,7 +683,6 @@ def home():
 
     try:
         # Obtener la fecha y hora local utilizando la función obtener_ubicacion_y_hora()
-        info_local = obtener_ubicacion_y_hora()
         fecha_local = datetime.now().replace(second=0, microsecond=0)
 
         # 🔹 Determinar filtro según tipo de usuario
@@ -727,7 +726,7 @@ def home():
             FROM HorasPaquete
             WHERE {filtro_usuario} 
             AND fecha_pago >= %s
-        """, (valor_usuario, fecha_hora_local))
+        """, (valor_usuario, fecha_local))
         promedio_horas = cursor.fetchone()["promedio_horas"]
 
         print(nombre_usuario)
