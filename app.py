@@ -273,6 +273,12 @@ def obtener_ubicacion_y_hora():
         "hora_local": hora_local
     }
 
+#Obtener hora para no hacer reserva en el pasado
+def obtener_hora_cancun():
+    zona_cancun = pytz.timezone('America/Cancun')
+    hora_cancun = datetime.now(zona_cancun)
+    return hora_cancun.strftime('%Y-%m-%d %H:%M:%S')
+
 # Crear un archivo con variables y tomarlas de aqui
 # Configuración de la base de datos
 DB_CONFIG = {
@@ -683,7 +689,7 @@ def home():
 
     try:
         # Obtener la fecha y hora local utilizando la función obtener_ubicacion_y_hora()
-        fecha_local = datetime.now().replace(second=0, microsecond=0)
+        fecha_local = obtener_hora_cancun()
 
         # 🔹 Determinar filtro según tipo de usuario
         if usuario_normal:
@@ -863,7 +869,7 @@ def reservacion():
                 print("Usuario Google:", id_usuario_global)
 
             # Validar que no se pueda reservar en el pasado
-            ahora = datetime.now().replace(second=0, microsecond=0)
+            ahora = obtener_hora_cancun()
             print(ahora)
             if fecha_reserva < ahora:
                 return jsonify({"success": False, "error": "No se puede hacer una reservación en el pasado"}), 400
