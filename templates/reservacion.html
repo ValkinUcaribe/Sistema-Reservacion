@@ -407,7 +407,7 @@
 
             function generarHorasDisponibles() {
                 const horas = [];
-                for (let i = 0; i < 24; i++) {
+                for (let i = 0; i <= 24; i++) {
                     const hora = i.toString().padStart(2, "0"); // Esto garantiza el formato de dos dígitos.
                     horas.push(hora);
                 }
