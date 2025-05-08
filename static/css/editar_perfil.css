@@ -1,0 +1,293 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+/* Estilos generales */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    font-family: Helvetica;
+    padding-top: 80px; /* Altura del header */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header */
+header {
+    background-color: #37495E;
+    color: white;
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: top 0.3s ease-in-out; /* Para animar el movimiento */
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%; /* Asegura que use todo el espacio horizontal */
+    gap: 40px;
+    position: relative;
+}
+
+/* Botón de menú hamburguesa */
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    display: none;
+}
+
+/* Navegación */
+nav {
+    display: flex;
+    align-items: center;
+    flex: 1; 
+}
+
+.nav-list {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-list li a {
+    padding: 5px 0;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: white;
+    font-weight: lighter;
+    font-size: 12px;
+    text-align: justify;
+}
+
+.nav-list li a:hover {
+    text-decoration: underline;
+}
+
+/* Logo */
+.logo img {
+    height: 38px;
+}
+
+/* Ícono de usuario */
+.user-icon {
+    margin-left: auto; 
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-icon span {
+    color: white;
+    font-size: 14px;
+}
+
+.user-icon a {
+    color: white;
+    font-size: 28px;
+    text-decoration: none;
+}
+
+.user-icon a:hover {
+    color: #4f6880;
+}
+
+main {
+    flex: 1;
+}
+
+/* CONTENEDOR */
+.container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 30px 20px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* TITULO */
+.container h2 {
+    text-align: center;
+    color: #37495E;
+    margin-bottom: 15px;
+}
+
+/* FORMULARIO EN DOS COLUMNAS */
+form {
+    display: grid;
+    grid-template-columns: 0fr auto 0fr auto;
+    gap: 15px;
+}
+
+.full-width {
+    grid-column: span 4;
+}
+
+/* FOTO DE PERFIL */
+.profile-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.profile-pic {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+    border: 3px solid #ccc;
+    transition: transform 0.3s;
+}
+
+.profile-pic:hover {
+    transform: scale(1.1);
+}
+
+/* CAMPOS DEL FORMULARIO */
+label {
+    font-weight: bold;
+    color: #37495E;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+input:focus, select:focus {
+    border-color: #28a745;
+    outline: none;
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.5);
+}
+
+/* BOTÓN CENTRADO */
+.button-container {
+    grid-column: span 4;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+button {
+    background-color: #3e5064;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #4f6880;
+}
+
+footer {
+    margin-top: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-container {
+        align-items: left;
+        gap: 10px;
+    }
+    
+    header {
+        text-align: center;
+        padding: 5px;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .logo {
+        margin: 0 auto;
+    }
+
+    nav {
+        position: absolute;
+        width: 100%;
+        display: none;
+        justify-content: left;
+        top: 70px;
+        left: 0;
+        right: 30px;
+        background-color: #37495E;
+        z-index: 1000;
+        padding: 20px;
+        border-radius: 0  0 10px 10px;
+        box-shadow: 0 2px px rgba(0,0,0,0.2);
+    }
+
+    nav.show {
+        display: block;
+    }
+
+    .nav-list {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .nav-list li a {
+        font-size: 16px;
+    }
+
+    .user-icon {
+        justify-content: left;
+        margin-top: 1px;
+        margin-top: 15px;
+    }
+
+    .user-icon span {
+        font-size: 16px;
+    }
+
+    .user-icon a {
+        font-size: 20px;
+    }
+    .container {
+        padding: 20px 10px;
+    }
+
+    form {
+        grid-template-columns: 1fr;
+    }
+
+    .full-width, .button-container {
+        grid-column: span 1;
+    }
+    .profile-container {
+        align-items: center;
+        text-align: center;
+    }
+    input, select {
+        font-size: 16px;
+    }
+} 

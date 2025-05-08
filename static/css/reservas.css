@@ -1,0 +1,278 @@
+* { 
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Helvetica, Arial, sans-serif;
+}
+/* Estilos generales */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    font-family: Helvetica;
+    padding-top: 80px; /* Altura del header */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header */
+header {
+    background-color: #37495E;
+    color: white;
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: top 0.3s ease-in-out; /* Para animar el movimiento */
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%; /* Asegura que use todo el espacio horizontal */
+    gap: 40px;
+    position: relative;
+}
+
+/* Botón de menú hamburguesa */
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    display: none;
+}
+
+/* Navegación */
+nav {
+    display: flex;
+    align-items: center;
+    flex: 1; /* Ocupa el espacio horizontal */
+}
+
+.nav-list {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-list li a {
+    padding: 5px 0;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: white;
+    font-weight: lighter;
+    font-size: 12px;
+    text-align: justify;
+}
+
+.nav-list li a:hover {
+    text-decoration: underline;
+}
+
+/* Logo */
+.logo img {
+    height: 38px;
+}
+
+/* Ícono de usuario */
+.user-icon {
+    margin-left: auto; /* 👈 Esto lo empuja al extremo derecho */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-icon span {
+    color: white;
+    font-size: 14px;
+}
+
+.user-icon a {
+    color: white;
+    font-size: 28px;
+    text-decoration: none;
+}
+
+.user-icon a:hover {
+    color: #4f6880;
+}
+
+main {
+    flex: 1;
+}
+
+/* BOTÓN CENTRADO */
+.button-container {
+    grid-column: span 4;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+button {
+    background-color: #3e5064;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #4f6880;
+}
+
+/* Reservas Section */
+.reservas {
+    padding: 40px;
+    background-color: #ecf0f1;
+    text-align: center;
+    flex: 1;
+}
+
+.reservas h1 {
+    font-size: 2em;
+    color: #2c3e50;
+}
+
+#reservas-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+#reservas-list li {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+    text-align: left;
+}
+
+#reservas-list li:hover {
+    transform: translateY(-5px);
+}
+
+#reservas-list li strong {
+    color: #555;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.no-reservas {
+    text-align: center;
+    color: #888;
+    font-size: 18px;
+}
+
+/* Footer */
+footer {
+    background-color: #37495E;
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+
+footer p {
+    margin: 0;
+}
+
+footer p + p {
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+footer a,
+footer a:visited,
+footer a:active {
+    color: white;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: white;
+    text-decoration: underline;
+    text-decoration-color: white; /* Asegura que la línea también sea blanca */
+} 
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-container {
+        align-items: left;
+        gap: 10px;
+    }
+
+    header {
+        text-align: center;
+        padding: 5px;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .logo {
+        margin: 0 auto;
+    }
+
+    nav {
+        position: absolute;
+        width: 100%;
+        display: none;
+        justify-content: left;
+        top: 70px;
+        left: 0;
+        right: 30px;
+        background-color: #37495E;
+        z-index: 1000;
+        padding: 20px;
+        border-radius: 0  0 10px 10px;
+        box-shadow: 0 2px px rgba(0,0,0,0.2);
+    }
+
+    nav.show {
+        display: block;
+        
+    }
+
+    .nav-list {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .nav-list li a {
+        font-size: 16px;
+    }
+
+    .user-icon {
+        justify-content: left;
+        margin-top: 1px;
+        margin-top: 15px;
+    }
+
+    .user-icon span {
+        font-size: 16px;
+    }
+
+    .user-icon a {
+        font-size: 20px;
+    }
+} 

@@ -1,0 +1,101 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(../image/Fondo.jpg) no-repeat center top;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background-color: #0D283B;
+    color: #fff;
+    padding: 20px 30px 30px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 22px;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="email"],
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    margin-bottom: 25px;
+    border: none;
+    border-bottom: 1px solid #fff;
+    background: transparent;
+    outline: none;
+    height: 30px;
+    color: #fff;
+    font-size: 16px;
+}
+
+button {
+    background-color: #4E6580;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background-color: #7692b2;
+}
+
+.back-link {
+    margin-top: 15px;
+    display: block;
+    text-decoration: none;
+    color: #b6d2f2;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.back-link:hover {
+    color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .container {
+        padding: 40px 20px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    .back-link {
+        font-size: 13px;
+    }
+}
+ 
