@@ -1294,11 +1294,13 @@ def obtener_reservas_cercanas():
         nombre_usuario = resultado_nombre["nombre"] if resultado_nombre else "Desconocido"
 
         # 🕒 Obtener fecha y hora actual
-        fecha_actual = datetime.now()
+        fecha_actual = obtener_hora_cancun()
+        print(fecha_actual)
 
         print(f"🔍 Consultando reservas para usuario ID: {id_usuario_global} - Fecha actual: {fecha_actual}")
 
         # 1️⃣ CONTAR RESERVAS A CAMBIAR A "inactivo"
+        #cambiar a caducado
         cursor.execute(f"""
             SELECT COUNT(*) as total_cambio
             FROM Reservas 
@@ -1308,12 +1310,13 @@ def obtener_reservas_cercanas():
         """, (id_usuario_global, fecha_actual))
         total_cambio = cursor.fetchone()["total_cambio"]
 
-        print(f"⚠️ Reservas cambiadas a 'inactivo': {total_cambio}")
+        print(f"⚠️ Reservas cambiadas a 'Caducado': {total_cambio}")
 
-        # 2️⃣ ACTUALIZAR RESERVAS VENCIDAS A "inactivo"
+        # 2️⃣ ACTUALIZAR RESERVAS VENCIDAS A "caducado"
+        #cambiar a caducado
         cursor.execute(f"""
             UPDATE Reservas 
-            SET estado_reserva = 'inactivo' 
+            SET estado_reserva = 'caducado' 
             WHERE {filtro_usuario} 
             AND estado_reserva = 'activo' 
             AND DATE_ADD(fecha_reserva, INTERVAL duracion HOUR) < %s
