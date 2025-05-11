@@ -54,6 +54,7 @@ def user_required(f):
         print(f"usuario_normal: {usuario_normal}")
         print(f"usuario_google: {usuario_google}")
         print(f"session completa: {dict(session)}")
+        actualizar_caducados()
 
         return f(*args, **kwargs)
     return decorated_function
@@ -343,6 +344,52 @@ def get_db_connection():
     except mysql.connector.Error as e:
         print("Error al conectar a la base de datos:", e)
         return None
+    
+def actualizar_caducados():
+    zona_cancun = pytz.timezone("America/Cancun")
+    ahora_cancun = datetime.now(zona_cancun)
+    fecha_actual = ahora_cancun.strftime('%Y-%m-%d')  # Para Pagos (date)
+    fecha_hora_actual = ahora_cancun.strftime('%Y-%m-%d %H:%M:%S')  # Para Reservas (timestamp)
+
+    connection = get_db_connection()
+    if not connection:
+        print("❌ No se pudo establecer la conexión con la base de datos.")
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # Actualizar paquetes caducados (comparar solo fecha)
+        query_paquetes = """
+            UPDATE Pagos
+            SET estado_paquete = 'caducado'
+            WHERE fecha_caducidad IS NOT NULL
+              AND fecha_caducidad < %s
+              AND estado_paquete != 'caducado'
+        """
+        cursor.execute(query_paquetes, (fecha_actual,))
+        paquetes_afectados = cursor.rowcount
+
+        # Actualizar reservas caducadas (timestamp completo)
+        query_reservas = """
+            UPDATE Reservas
+            SET estado_reserva = 'caducado'
+            WHERE fecha_reserva < %s
+              AND estado_reserva IS NULL OR estado_reserva != 'caducado'
+        """
+        cursor.execute(query_reservas, (fecha_hora_actual,))
+        reservas_afectadas = cursor.rowcount
+
+        connection.commit()
+
+        print(f"✅ Paquetes caducados: {paquetes_afectados}")
+        print(f"✅ Reservas caducadas: {reservas_afectadas}")
+
+    except mysql.connector.Error as err:
+        print("❌ Error al ejecutar actualizaciones:", err)
+    finally:
+        cursor.close()
+        connection.close()
 
 # Ruta de Login
 @app.route('/', methods=['GET', 'POST'])
