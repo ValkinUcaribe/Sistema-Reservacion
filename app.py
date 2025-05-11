@@ -54,7 +54,7 @@ def user_required(f):
         print(f"usuario_normal: {usuario_normal}")
         print(f"usuario_google: {usuario_google}")
         print(f"session completa: {dict(session)}")
-        actualizar_caducados()
+        caducar_por_fecha_sin_validar_estado()
 
         return f(*args, **kwargs)
     return decorated_function
@@ -345,48 +345,54 @@ def get_db_connection():
         print("Error al conectar a la base de datos:", e)
         return None
     
-def actualizar_caducados():
-    zona_cancun = pytz.timezone("America/Cancun")
-    ahora_cancun = datetime.now(zona_cancun)
-    fecha_actual = ahora_cancun.strftime('%Y-%m-%d')  # Para Pagos (date)
-    fecha_hora_actual = ahora_cancun.strftime('%Y-%m-%d %H:%M:%S')  # Para Reservas (timestamp)
-
+def caducar_por_fecha_sin_validar_estado():
     connection = get_db_connection()
     if not connection:
-        print("❌ No se pudo establecer la conexión con la base de datos.")
+        print("❌ Conexión fallida.")
         return
 
     try:
         cursor = connection.cursor()
 
-        # Actualizar paquetes caducados (comparar solo fecha)
-        query_paquetes = """
+        # Hora actual en Cancún
+        zona_cancun = pytz.timezone("America/Cancun")
+        ahora = datetime.now(zona_cancun).strftime('%Y-%m-%d %H:%M:%S')
+
+        # 1. Contar pagos que serán afectados
+        cursor.execute("""
+            SELECT COUNT(*) FROM Pagos
+            WHERE fecha_caducidad IS NOT NULL AND fecha_caducidad < %s
+        """, (ahora,))
+        pagos_afectados = cursor.fetchone()[0]
+
+        # 2. Actualizar pagos
+        cursor.execute("""
             UPDATE Pagos
             SET estado_paquete = 'caducado'
-            WHERE fecha_caducidad IS NOT NULL
-              AND fecha_caducidad < %s
-              AND estado_paquete != 'caducado'
-        """
-        cursor.execute(query_paquetes, (fecha_actual,))
-        paquetes_afectados = cursor.rowcount
+            WHERE fecha_caducidad IS NOT NULL AND fecha_caducidad < %s
+        """, (ahora,))
 
-        # Actualizar reservas caducadas (timestamp completo)
-        query_reservas = """
+        # 3. Contar reservas que serán afectadas
+        cursor.execute("""
+            SELECT COUNT(*) FROM Reservas
+            WHERE fecha_reserva < %s
+        """, (ahora,))
+        reservas_afectadas = cursor.fetchone()[0]
+
+        # 4. Actualizar reservas
+        cursor.execute("""
             UPDATE Reservas
             SET estado_reserva = 'caducado'
             WHERE fecha_reserva < %s
-              AND estado_reserva IS NULL OR estado_reserva != 'caducado'
-        """
-        cursor.execute(query_reservas, (fecha_hora_actual,))
-        reservas_afectadas = cursor.rowcount
+        """, (ahora,))
 
         connection.commit()
 
-        print(f"✅ Paquetes caducados: {paquetes_afectados}")
+        print(f"✅ Pagos caducados: {pagos_afectados}")
         print(f"✅ Reservas caducadas: {reservas_afectadas}")
 
     except mysql.connector.Error as err:
-        print("❌ Error al ejecutar actualizaciones:", err)
+        print("❌ Error durante la ejecución:", err)
     finally:
         cursor.close()
         connection.close()
