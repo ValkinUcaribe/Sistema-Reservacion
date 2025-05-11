@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es"> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a Valkin</title>
     <style>
-        body {
+        /*body {
             font-family: 'Helvetica', sans-serif;
             background-color: #f4f4f4;
             margin: 0;
@@ -42,7 +42,7 @@
             color: #333;
         }
         h2 {
-            color: #38485b; /* Color del header */
+            color: #38485b; /* Color del header *//*
             display: flex;
             justify-content: center;
             align-items: center;
@@ -78,6 +78,90 @@
         .footer a {
             color: #38485b;
             text-decoration: none;
+        }*/
+
+        body {
+            font-family: helvetica;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+        table {
+            border-spacing: 0;
+            width: 100%;
+        }
+        td {
+            padding: 0;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background-color: #ffffff;
+            margin: 0 auto;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #37495E;
+            padding: 10px 20px;
+            text-align: left;
+            border-radius: 8px 8px 0 0;
+        }
+        .header img {
+            height: 38px;
+        }
+        .content {
+            padding: 30px 40px;
+            font-size: 16px;
+            text-align: justify;
+        }
+        h2 {
+            color: #38485b;
+            text-align: center;
+        }
+        h3 {
+            color:black
+        } 
+        h4 {
+            color: #38485b;
+        }
+        .indentado {
+            text-indent: 30px;
+            line-height: 1.25;
+        }
+        .cursiva {
+            font-style: italic;
+            font-size: 14px; 
+        }
+        .btn-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            max-width: 250px;
+            padding: 12px 20px;
+            background-color: #f69a12;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #d07c0d;
+        }
+        .footer {
+            background-color: #37495E;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 0 0 8px 8px;
+            font-size: 12px;
+        }
+        .footer a {
+            color: white;
+            text-decoration: none;
         }
         
         .imagen-responsiva {
@@ -95,7 +179,7 @@
             <img src="https://drive.google.com/uc?export=view&id=1fh0EeBFfZxmH_h5_dcMN3R6q3edxYeQK" type="image/png" alt="Logo de Valkin" class="imagen-responsiva">
         </div>
         <div class="content">
-            <h2>¡Bienvenido a Valkin! ✈️</h2>
+            <h2>¡Bienvenido a Valkin! <img src="\static\image\Logo Ala.jpg" alt="Logo de Valkin" style="height: 30px; vertical-align: middle; margin-left: 0;"></h2>
             <p><strong>Hola [Nombre],</strong></p>
             <p>¡Gracias por registrarte en <strong>Valkin</strong>! Nos emociona tenerte a bordo.</p>
             <p>Ahora puedes acceder a nuestra plataforma para reservar simuladores de vuelo y mejorar tus habilidades en aviación con la mejor tecnología.</p>
@@ -106,6 +190,35 @@
             <div class="btn-container">
                 <a href="[URL_DE_TU_SITIO]" class="btn" role="button">Ir a Valkin</a>
             </div>
+            <!--
+            <p>Si tienes alguna duda, estamos aquí para ayudarte.</p>
+            <p><strong>¡Nos vemos en el aire!</strong></p>-->
+            <p>
+                A continuación, te proporcionamos las instrucciones para acceder y comenzar tu experiencia de vuelo virtual.
+            </p>
+            <h3>INSTRUCCIONES</h3>
+            <h4>🔹 Requisitos del Sistema</h4>
+            <p>Asegúrate de contar con un equipo compatible:</p>
+                <p class="indentado">✅ Windows – <a href="#">Descargar aquí</a></p>
+                <!--
+                <p class="indentado">✅ MacOS – <a href="#">Descargar aquí</a></p>
+                -->
+            <p class="cursiva">
+                ⚠️ NOTA: Se recomienda realizar la descarga e instalación horas antes de la sesión reservada.
+            </p>
+            <h4>🔹 Instrucciones de Inicio de Sesión</h4>
+            <p>Para acceder a la plataforma, sigue estos pasos:</p>
+            <ol>
+                <li>Ingresa al software 15 minutos antes de tu sesión.</li>
+                <li>Verificar que los periféricos (joysticks) esten conectados correctamente.</li>
+                <li>Ingresa el Token único de reservaciones (lo recibirás al completar tu reservación).</li>
+                
+            </ol>
+            <p class="cursiva">
+                ❗ NOTA: El Token de acceso será enviado automáticamente al realizar la reservación.
+            </p>
+            <h4>📌 Importante</h4>
+            <p class="indentado">✔ Guarda este correo para futuras referencias.</p>
             <p>Si tienes alguna duda, estamos aquí para ayudarte.</p>
             <p><strong>¡Nos vemos en el aire!</strong></p>
         </div>
