@@ -123,12 +123,12 @@ nav {
 
 .clock-container {
     display: flex;
-    gap: 40px;
-    background: #ffffffee;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.15);
-    flex-wrap: wrap;
+    gap: 20px; /* antes 40px */
+    background: white;
+    padding: 15px; /* antes 30px */
+    border-radius: 12px; /* antes 20px */
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15); /* más sutil */
+    transform: scale(0.85); /* OPCIONAL: encoge todo proporcionalmente */
 }
 
 .clock {
@@ -154,14 +154,19 @@ nav {
 }
 
 .time {
-    font-size: 2.5em;
+    font-size: 1.6em;
     font-weight: bold;
     color: #0077cc;
     margin-bottom: 10px;
 }
 
+.timezone {
+    font-size: 0.8em; /* antes 0.9em */
+    color: #777;
+  }
+
 .location {
-    font-size: 1em;
+    font-size: 0.9em;
     color: #666;
     display: flex;
     align-items: center;
