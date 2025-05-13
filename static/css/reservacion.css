@@ -252,7 +252,7 @@ main {
 }*/ 
 
 .fc-fecha-seleccionada {
-    background-color: #3e5064 !important;
+    background-color: #FF6600 !important;
     border-radius: 5px;
     font-weight: bold;
     color: #000 !important;
@@ -273,6 +273,14 @@ main {
     flex-direction: column;
     overflow: hidden; /* oculta el scroll aquí */
 }
+
+.hora-seleccionada {
+    background-color: #FF6600;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+}
+
 
 .titulo-hrs {
     background-color: white;

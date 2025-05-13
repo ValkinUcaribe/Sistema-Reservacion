@@ -275,33 +275,31 @@
         document.addEventListener("DOMContentLoaded", function () {
             let calendarEl = document.getElementById("calendar");
             let diaSeleccionado = null;
+            let horaSeleccionada = null;
+
             let calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: "dayGridMonth",
-                selectable: true, /*
+                selectable: true,                
                 dateClick: function (info) {
+                    // Mostrar la fecha seleccionada
                     document.getElementById("fecha-seleccionada").textContent = info.dateStr;
                     actualizarHoras(info.dateStr);
-                }*/
-               
 
-    dateClick: function (info) {
-        // Mostrar la fecha seleccionada
-        document.getElementById("fecha-seleccionada").textContent = info.dateStr;
-        actualizarHoras(info.dateStr);
+                    // Remover selección anterior
+                    if (diaSeleccionado) {
+                        diaSeleccionado.classList.remove("fc-fecha-seleccionada");
+                    }
 
-        // Remover selección anterior
-        if (diaSeleccionado) {
-            diaSeleccionado.classList.remove("fc-fecha-seleccionada");
-        }
-
-        // Guardar el nuevo elemento seleccionado y marcarlo
-        diaSeleccionado = info.dayEl;
-        diaSeleccionado.classList.add("fc-fecha-seleccionada");
-    }
+                    // Guardar el nuevo elemento seleccionado y marcarlo
+                    diaSeleccionado = info.dayEl;
+                    diaSeleccionado.classList.add("fc-fecha-seleccionada");
+                }
             });
             calendar.render();
         
             verificarHorasDisponibles();
+
+            /*Selección de horas*/
         
             const popupReserva = document.getElementById("popupReserva");
             const btnConfirmar = document.getElementById("btnConfirmar");
