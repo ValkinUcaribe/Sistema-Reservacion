@@ -109,18 +109,6 @@ nav {
     color: #4f6880;
 }
 
-/* Content */
-.content {
-    flex: 1;
-    padding: 2rem;
-    overflow-y: auto;
-}
-  
-.content h1 {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-}
-
 .clock-container {
     display: flex;
     gap: 20px; /* antes 40px */
