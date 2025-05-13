@@ -8,6 +8,7 @@
     <!--<link rel="stylesheet" href="/static/css/reservacion.css"> -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reservacion.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         .num-duracion {
             display: flex;
@@ -125,6 +126,26 @@
         </div>
     </header>
 
+    <div class="content">
+        <div class="clock-container">
+            <div class="clock" id="local">
+              <div class="icon">🕒</div>
+              <div class="label">Hora Local</div>
+              <div class="time" id="localTime">--:--:--</div>
+              <div class="location" id="localLocation"><span>🌍</span>Obteniendo ubicación...</div>
+              <div class="timezone" id="localTZ">--</div>
+            </div>
+          
+            <div class="clock" id="cancun">
+              <div class="icon">🕒</div>
+              <div class="label">Hora Reservacion</div>
+              <div class="time" id="cancunTime">--:--:--</div>
+              <div class="location"><span>📍</span>Cancún, México</div>
+              <div class="timezone" id="cancunTZ">--</div>
+            </div>
+          </div>
+    </div>
+
     <main id="contenido-principal">
         <div class="contenedor-reserva">
             <div class="tarjeta">
@@ -209,8 +230,50 @@
                 navMenu.classList.toggle('show');
             });
 
+        /*--------------------------------------------------------------------------*/
+        function updateClocks() {
+        const now = new Date();
 
+        // Hora local
+        document.getElementById("localTime").textContent =
+        now.toLocaleTimeString('es-MX');
 
+        // Hora de Cancún
+        document.getElementById("cancunTime").textContent =
+        now.toLocaleTimeString('es-MX', { timeZone: 'America/Cancun' });
+
+        // Obtener zona horaria local
+        const localOffset = -now.getTimezoneOffset() / 60;
+        const localSign = localOffset >= 0 ? "+" : "";
+        document.getElementById("localTZ").textContent = `UTC${localSign}${localOffset}`;
+
+        // Zona horaria Cancún (fija en UTC-5 casi todo el año)
+        const cancunTime = new Date().toLocaleString('en-US', {
+        timeZone: 'America/Cancun',
+        timeZoneName: 'short'
+        });
+
+        // Extraer UTC offset de Cancún
+        const tzMatch = cancunTime.match(/GMT([+-]\d+)/);
+        const cancunOffset = tzMatch ? tzMatch[1] : "-5";
+        document.getElementById("cancunTZ").textContent = `UTC${cancunOffset}`;
+        }
+
+        setInterval(updateClocks, 1000);
+        updateClocks();
+
+        // Obtener ubicación aproximada del usuario vía IP
+        fetch('https://ipapi.co/json')
+            .then(res => res.json())
+            .then(data => {
+            const locationText = `${data.city}, ${data.country_name}`;
+            document.getElementById("localLocation").textContent = locationText;
+            })
+            .catch(() => {
+            document.getElementById("localLocation").textContent = "Ubicación no disponible";
+            });
+
+        /*--------------------------------------------------------------------------*/
 
         document.addEventListener("DOMContentLoaded", function () {
             let calendarEl = document.getElementById("calendar");
