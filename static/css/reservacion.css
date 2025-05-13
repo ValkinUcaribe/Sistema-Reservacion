@@ -243,6 +243,22 @@ main {
     overflow: hidden; /* Evitamos el scroll */
 }
 
+/*SELECCIÓN DE DÍA */ /*
+.seleccionado {
+    background-color: #007BFF !important;
+    color: white !important;
+    border-radius: 5px;
+    font-weight: bold;
+}*/ 
+
+.fc-fecha-seleccionada {
+    background-color: #3e5064 !important;
+    border-radius: 5px;
+    font-weight: bold;
+    color: #000 !important;
+    transition: background-color 0.2s ease;
+}
+
 
 /*Este es el contenido de las horas*/
 
@@ -620,6 +636,10 @@ footer a:hover {
     }
     dialog {
         width: 90%;
+    }
+    .fc-fecha-seleccionada {
+        font-size: 0.9rem;
+        padding: 4px;
     }
     
 }

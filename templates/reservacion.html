@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reservar</title>
     <link rel="icon" href="\static\image\LogoAla.png" type="image/png">
-    <!--<link rel="stylesheet" href="/static/css/reservacion.css"> -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/reservacion.css') }}">
+    <link rel="stylesheet" href="/static/css/reservacion.css">  <!--
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reservacion.css') }}"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -107,7 +107,7 @@
                     <li><a href="/tienda">TIENDA</a></li>
                     <li><a href="/tutoriales">TUTORIALES</a></li>
                     <li><a href="/paquetes">PAQUETES</a></li>
-                    <li><a href="/reservas_page">RESERVAS</a></li>
+                    <li><a href="/reservas_page">AGENDA</a></li>
                 </ul>
                 <div class="user-icon">
                     
@@ -186,7 +186,7 @@
                 <button id="btnContinuar">Continuar</button>
             </div>
         </dialog>                     
-    </main>
+    </main> 
     
     <!-- Footer -->
     <footer>
@@ -274,13 +274,30 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             let calendarEl = document.getElementById("calendar");
+            let diaSeleccionado = null;
             let calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: "dayGridMonth",
-                selectable: true,
+                selectable: true, /*
                 dateClick: function (info) {
                     document.getElementById("fecha-seleccionada").textContent = info.dateStr;
                     actualizarHoras(info.dateStr);
-                }
+                }*/
+               
+
+    dateClick: function (info) {
+        // Mostrar la fecha seleccionada
+        document.getElementById("fecha-seleccionada").textContent = info.dateStr;
+        actualizarHoras(info.dateStr);
+
+        // Remover selección anterior
+        if (diaSeleccionado) {
+            diaSeleccionado.classList.remove("fc-fecha-seleccionada");
+        }
+
+        // Guardar el nuevo elemento seleccionado y marcarlo
+        diaSeleccionado = info.dayEl;
+        diaSeleccionado.classList.add("fc-fecha-seleccionada");
+    }
             });
             calendar.render();
         
@@ -357,6 +374,7 @@
                 }
             });
         });
+        
     
         function abrirPopupReserva() {
             let fechaSeleccionada = document.getElementById("fecha-seleccionada").textContent.trim();
@@ -558,6 +576,9 @@
                 btnReservar.disabled = true;
             }
         }
+
+        /*selección de fecha*/
+        
     </script>           
 </body>
 </html>
