@@ -1415,9 +1415,9 @@ def obtener_reservas_cercanas():
 #Se hara el token de acuerdo a este formato Distintivo numero de workspace-Nombre Usuario o ID- fecha - hora -  duracion de la reservacion
 #Se pondra en la bd con ID, ID_usuario o ID_usuario_google, ID_reservacion, y el token hasheado
 #falta implementacion y verificar una cosas
-@app.route('/reservas_page')
+@app.route('/agenda')
 @user_required
-def reservas_page():
+def agenda():
     # 🔒 Verificación de autenticación
     if not (usuario_normal or usuario_google):
         return redirect(url_for('login'))

@@ -30,7 +30,7 @@
                     <li><a href="/tienda">TIENDA</a></li>
                     <li><a href="/tutoriales">TUTORIALES</a></li>
                     <li><a href="/paquetes">PAQUETES</a></li>
-                    <li><a href="/reservas_page">AGENDA</a></li>
+                    <li><a href="/agenda">AGENDA</a></li>
                 </ul>
                 <div class="user-icon">
                     
@@ -158,6 +158,13 @@
                     form.submit();
                 }
             });
+        });
+        
+        // Limitar fecha_nacimiento al día de hoy como máximo
+        document.addEventListener('DOMContentLoaded', () => {
+            const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaNacimientoInput.max = hoy;
         });
     </script>
 </body>

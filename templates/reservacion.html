@@ -107,7 +107,7 @@
                     <li><a href="/tienda">TIENDA</a></li>
                     <li><a href="/tutoriales">TUTORIALES</a></li>
                     <li><a href="/paquetes">PAQUETES</a></li>
-                    <li><a href="/reservas_page">AGENDA</a></li>
+                    <li><a href="/agenda">AGENDA</a></li>
                 </ul>
                 <div class="user-icon">
                     
@@ -483,7 +483,7 @@
 
             function generarHorasDisponibles() {
                 const horas = [];
-                for (let i = 0; i <= 24; i++) {
+                for (let i = 0; i < 24; i++) {
                     const hora = i.toString().padStart(2, "0"); // Esto garantiza el formato de dos dígitos.
                     horas.push(hora);
                 }
