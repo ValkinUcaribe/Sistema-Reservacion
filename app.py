@@ -22,7 +22,10 @@ from dotenv import load_dotenv
 from functools import wraps
 from cryptography.fernet import Fernet
 
+# Cargar credenciales
 load_dotenv()
+
+# Clave para la codificacion
 clave = os.getenv("FERNET_KEY")
 
 if clave is None:
@@ -30,6 +33,7 @@ if clave is None:
 
 fernet = Fernet(clave)
 
+# Verificacion de usuario
 def user_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -59,6 +63,7 @@ def user_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Verificacion de administrador
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -67,6 +72,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Cargar datos en la variabe global en cada ruta
 def cargar_datos_usuario():
     global id_usuario_global, nombre_usuario, usuario_normal, usuario_google
 
@@ -91,7 +97,7 @@ def cargar_datos_usuario():
 def generar_pin():
     return ''.join(random.choices(string.digits, k=6))
 
-# envio de pin con imagen lista falta el de bienvenida y el de envio de token
+# Envio del pin al correo eletronico
 def cargar_y_modificar_html(ruta_html, pin, nombre):
     """
     Carga un archivo HTML y reemplaza las variables dinámicas con enlaces de imágenes en Google Drive.
@@ -205,6 +211,7 @@ def cargar_y_modificar_html_3(ruta_html,nombre):
         print(f"❌ Error al procesar el HTML: {e}")
         return None
 
+# Envio de los correos
 def enviar_correo(remitente, contraseña, destino, asunto, html_modificado):
     """
     Envía un correo electrónico con contenido HTML sin adjuntar imágenes.
@@ -246,6 +253,7 @@ def enviar_correo(remitente, contraseña, destino, asunto, html_modificado):
     except Exception as e:
         print(f"❌ Error al enviar el correo: {e}")
 
+# Obtencion de hora y ubcacion del usuario
 def obtener_ubicacion_y_hora():
     # Realizar la solicitud a la API de ipinfo.io
     response = requests.get('https://ipinfo.io')
@@ -291,7 +299,6 @@ def obtener_hora_cancun():
     
     return ahora_naive
 
-# Crear un archivo con variables y tomarlas de aqui
 # Configuración de la base de datos
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
@@ -328,7 +335,7 @@ app.config['STRIPE_PUBLIC_KEY'] = os.getenv('STRIPE_PUBLIC_KEY')
 app.config['STRIPE_SECRET_KEY'] = os.getenv('STRIPE_SECRET_KEY')
 stripe.api_key = app.config['STRIPE_SECRET_KEY']
 
-# Ruta donde está la plantilla HTML
+# Ruta donde está la plantilla HTML para el pin
 RUTA_CARPETA = "templates"  
 ARCHIVO_HTML = "Codigo_verificacion.html"
 
@@ -344,7 +351,8 @@ def get_db_connection():
     except mysql.connector.Error as e:
         print("Error al conectar a la base de datos:", e)
         return None
-    
+
+# Cambio a estado a caducado y llego el dia
 def caducar_por_fecha_sin_validar_estado():
     connection = get_db_connection()
     if not connection:
@@ -739,7 +747,6 @@ def olvido():
     return render_template('olvido.html')
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Función para entrar al home de la página
-# ver la forma de tomar las reservaciones y cambiar lo de microsft tanto nombre como imagen
 @app.route('/home', methods=['GET', 'POST'])
 @user_required
 def home():
@@ -838,6 +845,7 @@ def tienda():
 
     return render_template('tienda.html', productos=productos)
 
+# Funcion para los paquetes propuestos
 @app.route('/paquetes')
 @user_required
 def paquetes():
@@ -874,9 +882,8 @@ def paquetes():
         cursor.close()
         connection.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Funcion para las reservaciones cambiar
-# Cambiar para que distinga entre usuario normal y google y verifique disponibilidad de fecha y hora
-# Cambiar para que acepte el forma de fecha y hora del frontend
+# Funcion para las reservaciones
+# Verifica si hay disponibilidad tanto hora,fecha y si tienes paquetes para la duracion
 @app.route('/reservacion', methods=['GET', 'POST']) 
 @user_required
 def reservacion():
@@ -1056,6 +1063,8 @@ def reservacion():
 
     return render_template("reservacion.html")
 
+# Confirmacion de las reservacion
+# Consume los paquetes
 @app.route("/confirmar_reservacion", methods=["POST"])
 @user_required
 def confirmar_reservacion():
@@ -1203,6 +1212,7 @@ def confirmar_reservacion():
         cursor.close()
         connection.close()
 
+# Para cuando el usuario no quiera la reserva
 @app.route('/eliminar_reserva/<int:id_reserva>', methods=['DELETE'])
 def eliminar_reserva(id_reserva):
     # Abrir conexión a la base de datos
@@ -1232,7 +1242,7 @@ def eliminar_reserva(id_reserva):
         conn.close()
         return jsonify({"error": f"Error al eliminar la reserva: {str(e)}"}), 500
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+# Mostrar las horas disponibles del usuario suma todas las que tenga
 @app.route('/horas_disponibles', methods=['GET'])
 @user_required
 def horas_disponibles():
@@ -1323,6 +1333,7 @@ def horas_disponibles():
         cursor.close()
         connection.close()
 
+# Mostrar al usuario sus proximas 3 reservas enviadas al home nada mas
 @app.route("/reservas_cercanas", methods=["GET"])
 @user_required
 def obtener_reservas_cercanas():
@@ -1412,9 +1423,7 @@ def obtener_reservas_cercanas():
         connection.close()
         print("🔌 Conexión cerrada.")
 
-#Se hara el token de acuerdo a este formato Distintivo numero de workspace-Nombre Usuario o ID- fecha - hora -  duracion de la reservacion
-#Se pondra en la bd con ID, ID_usuario o ID_usuario_google, ID_reservacion, y el token hasheado
-#falta implementacion y verificar una cosas
+# Se mostraran todas las reservaciones hechas del usuario desde la ultima hasta la mas reciente
 @app.route('/agenda')
 @user_required
 def agenda():
@@ -1466,6 +1475,7 @@ def hash_token(token):
     sha256_hash.update(token.encode('utf-8'))
     return sha256_hash.hexdigest()
 
+# Creacion del token y envio del mismo
 @app.route('/crear_token_reserva', methods=['POST'])
 @user_required
 def crear_token_reserva():
@@ -1557,6 +1567,7 @@ def crear_token_reserva():
         cursor.close()
         conn.close()
 
+# Reenvio del token existen
 @app.route('/reenviar_token_reserva', methods=['POST'])
 @user_required
 def reenviar_token_reserva():
@@ -1977,6 +1988,7 @@ def thanks():
         if connection:
             connection.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Funcion para la verificacion del usuario de google
 @app.route("/verificacion_google", methods=['POST', 'GET'])
 def verificacion_google():
     global state_global
@@ -1992,7 +2004,7 @@ def verificacion_google():
     state_global = state
     return redirect(authorization_url)
 
-
+# Recibimiento de los datos tomados de la validacion
 @app.route('/callback')
 def callback():
     try:
@@ -2026,7 +2038,7 @@ def callback():
     except Exception as e:
         return f'Error en el callback: {str(e)}', 400
 
-
+# obtener toda la informacion obtenida
 def obtener_informacion_usuario(credentials):
     """
     Usa el token de acceso para obtener los datos del usuario desde la API de Google.
@@ -2045,7 +2057,7 @@ def obtener_informacion_usuario(credentials):
         print(f"❌ Error al obtener el usuario de Google: {response.status_code}")
         return None
 
-
+# insercion del usuario en la base de datos
 def insertar_usuario_en_db(user_info):
     """
     Inserta en la tabla Usuarios_Google si no existe y retorna un diccionario con ID y nombre del usuario.
@@ -2092,7 +2104,6 @@ def insertar_usuario_en_db(user_info):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Rutas de administrador
-#@admin_required
 @app.route('/administrador', methods=['GET', 'POST'])
 def administrador_login():
     error = None
@@ -2212,7 +2223,7 @@ def obtener_estadisticas_usuarios():
     except mysql.connector.Error as e:
         return jsonify({"error": f"Error al consultar la base de datos: {str(e)}"}), 500
     
-# Ruta 1: Estadísticas de reservas
+# Estadísticas de reservas
 @app.route('/estadisticas_reservas', methods=['GET'])
 @admin_required
 def estadisticas_reservas():
@@ -2261,7 +2272,7 @@ def estadisticas_reservas():
         "reservas_por_anio": por_anio
     })
 
-# Ruta 2: Estadísticas de paquetes adquiridos
+# Estadísticas de paquetes adquiridos
 @app.route('/estadisticas_paquetes', methods=['GET'])
 @admin_required
 def estadisticas_paquetes():
@@ -2294,6 +2305,7 @@ def estadisticas_paquetes():
         "paquetes_adquiridos": paquetes_estadisticas
     })
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CRUD de paquetes
 @app.route('/administrador_paquetes', methods=['GET'])
 @admin_required
 def administrador_paquetes():
@@ -2391,6 +2403,7 @@ def editar_paquete(id_paquete):
 
     return render_template('editar_paquete.html', paquete=paquete)
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CRUD de tutoriales
 @app.route('/administrador_tutoriales', methods=['GET', 'POST'])
 @admin_required
 def administrador_tutoriales():
@@ -2469,6 +2482,7 @@ def eliminar_tutorial(id):
     return redirect(url_for('administrador_tutoriales'))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CRUD de tienda
 @app.route('/administrador_tienda', methods=['GET'])
 @admin_required
 def administrador_tienda():
@@ -2550,11 +2564,13 @@ def eliminar_producto(id):
     conn.close()
     return redirect(url_for('administrador_tienda'))  # o la ruta que tengas para la vista admin
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Cerrar session del administrador
 @app.route('/logout_admin')
 def logout_admin():
     session.clear()
     return redirect(url_for('administrador_login'))
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Ruta de la parte de tutoriales
 @app.route('/tutoriales', methods=['GET', 'POST'])
 @user_required
 def tutoriales():
