@@ -1988,14 +1988,28 @@ def thanks():
         if connection:
             connection.close()
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Configuración de Google OAuth (similar a DB_CONFIG)
+GOOGLE_OAUTH_CONFIG = {
+    "web": {
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+        "auth_uri": os.getenv("GOOGLE_AUTH_URI"),
+        "token_uri": os.getenv("GOOGLE_TOKEN_URI"),
+        "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI")],
+        "project_id": "verificacion-460523",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "javascript_origins": ["https://www.simuladordevuelo.online"]
+    }
+}
+
 # Funcion para la verificacion del usuario de google
 @app.route("/verificacion_google", methods=['POST', 'GET'])
 def verificacion_google():
     global state_global
-    flow = Flow.from_client_secrets_file(
-        'client_secrets.json',
+    flow = Flow.from_client_config(
+        GOOGLE_OAUTH_CONFIG,
         scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
-        redirect_uri='https://localhost:5000/callback'
+        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI")
     )
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -2012,11 +2026,11 @@ def callback():
         if not state_global:
             return 'Error: No se pudo recuperar el estado de la sesión.', 400
 
-        flow = Flow.from_client_secrets_file(
-            'client_secrets.json',
+        flow = Flow.from_client_config(
+            GOOGLE_OAUTH_CONFIG,
             scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
             state=state_global,
-            redirect_uri='https://localhost:5000/callback'
+            redirect_uri=os.getenv("GOOGLE_REDIRECT_URI")
         )
 
         flow.fetch_token(authorization_response=request.url)
