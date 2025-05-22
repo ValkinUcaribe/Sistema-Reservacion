@@ -330,6 +330,13 @@ primera_compra = False
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 
+# 🔒 Configuración SEGURA de cookies (esto va JUSTO DESPUÉS de crear la app)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,     # Solo envía cookies sobre HTTPS
+    SESSION_COOKIE_HTTPONLY=True,   # Previene acceso via JavaScript
+    SESSION_COOKIE_SAMESITE='Lax'   # Protección contra CSRF (permite redirecciones externas seguras)
+)
+
 # Para la pasarela de pago
 app.config['STRIPE_PUBLIC_KEY'] = os.getenv('STRIPE_PUBLIC_KEY')
 app.config['STRIPE_SECRET_KEY'] = os.getenv('STRIPE_SECRET_KEY')
@@ -2022,9 +2029,12 @@ def verificacion_google():
 @app.route('/callback')
 def callback():
     try:
+        if 'error' in request.args:
+            return f"Error de Google: {request.args.get('error')}", 400
+
         global state_global
-        if not state_global:
-            return 'Error: No se pudo recuperar el estado de la sesión.', 400
+        if not state_global or request.args.get('state') != state_global:
+            return 'Error de estado en la sesión', 400
 
         flow = Flow.from_client_config(
             GOOGLE_OAUTH_CONFIG,
