@@ -348,7 +348,7 @@ ARCHIVO_HTML = "Codigo_verificacion.html"
 
 # Configuración del remitente y contraseña de donde se va enviar los correos
 REMITENTE=os.getenv("EMAIL_REMITENTE_EMPRESA")
-CONTRASEÑA = os.getenv("EMAIL_CONTRASEÑA")
+CONTRASEÑA = os.getenv("EMAIL_CONTRASENA")
 
 # Crear conexión global a la base de datos
 def get_db_connection():
